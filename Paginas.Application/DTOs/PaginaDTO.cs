@@ -22,16 +22,6 @@ namespace Paginas.Application.DTOs
         public int? CdPai { get; set; }
     }
 
-    public class BotaoDTO
-    {
-        [Required(ErrorMessage = "O nome do botão é obrigatório.")]
-        public string Nome { get; set; }
-        public string Link { get; set; }
-        public int Linha { get; set; }
-        public int Coluna { get; set; }
-        public byte[] ArquivoBytes { get; set; }  // Conteúdo do arquivo
-    }
-
     public class TopicoDTO
     {
         [Required(ErrorMessage = "O título do tópico é obrigatório.")]

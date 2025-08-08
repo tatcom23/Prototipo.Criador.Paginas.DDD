@@ -1,8 +1,7 @@
-﻿using Paginas.Application.DTOs;
-using Paginas.Application.Services.Interfaces;
-using Paginas.Domain.Entities;
-using Paginas.Domain.Repositories;
+﻿using Paginas.Application.Services.Interfaces;
 using System.Threading.Tasks;
+using Paginas.Domain.Repositories.Interfaces;
+using Paginas.Domain.Entities;
 
 namespace Paginas.Application.Services
 {

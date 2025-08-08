@@ -41,11 +41,13 @@ namespace Paginas.Web.Controllers
             if (existente == null)
                 return NotFound();
 
-            await _botaoService.AtualizarAsync(id, botao);
+            botao.Codigo = id; // garante que o DTO está correto para atualizar
+            await _botaoService.AtualizarAsync(botao);
 
             TempData["Mensagem"] = "Botão atualizado com sucesso!";
             return RedirectToAction("Detalhes", "Pagina", new { id = botao.CdPaginaIntrodutoria });
         }
+
 
         [HttpGet("Excluir/{id}")]
         public async Task<IActionResult> Excluir(int id)
