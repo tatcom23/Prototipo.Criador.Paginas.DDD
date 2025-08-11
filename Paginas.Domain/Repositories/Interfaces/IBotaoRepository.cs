@@ -7,10 +7,11 @@ namespace Paginas.Domain.Repositories.Interfaces
     public interface IBotaoRepository
     {
         Task<Botao> ObterPorIdAsync(int id);
-        Task<List<Botao>> ListarAsync();
+        Task<List<Botao>> ListarTodosAsync();
+        Task<List<Botao>> ListarPorPaginaAsync(int cdPagina); // consulta mais semântica
         Task AdicionarAsync(Botao botao);
         Task AtualizarAsync(Botao botao);
-        Task ExcluirAsync(int id);
-        Task SalvarAsync();
+        Task RemoverAsync(int id);
+        Task SalvarAlteracoesAsync();
     }
 }

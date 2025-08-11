@@ -6,13 +6,13 @@ namespace Paginas.Domain.Repositories.Interfaces
 {
     public interface IPaginaRepository
     {
-        Task<List<Pagina>> ListarAsync();
-        Task<Pagina> BuscarPorIdAsync(int id);
+        Task<List<Pagina>> ListarTodasAsync();
+        Task<Pagina> ObterPorIdAsync(int id);
+        Task<List<Pagina>> ListarFilhosAsync(int cdPai);
         Task AdicionarAsync(Pagina pagina);
         Task AtualizarAsync(Pagina pagina);
-        Task ExcluirAsync(Pagina pagina);
-        Task<List<Pagina>> ListarFilhosAsync(int cdPai);
-        Task SalvarAsync();
+        Task RemoverAsync(Pagina pagina);
+        Task SalvarAlteracoesAsync();
     }
 }
 

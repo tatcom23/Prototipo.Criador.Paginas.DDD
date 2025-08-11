@@ -3,7 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using System;
 using Paginas.Domain.Repositories.Interfaces;
 using Paginas.Infrastructure.Data.Context;
 
@@ -18,16 +17,16 @@ namespace Paginas.Infrastructure.Repositories
             _context = context;
         }
 
-        public async Task<List<Pagina>> ListarAsync()
+        public async Task<List<Pagina>> ListarTodasAsync()
         {
             return await _context.Paginas
                 .Include(p => p.Botoes)
-                .Include(p => p.PaginaFilhos) // <- Carrega os tópicos
-                .ThenInclude(t => t.Botoes)   // <- E os botões dos tópicos
+                .Include(p => p.PaginaFilhos)
+                    .ThenInclude(t => t.Botoes)
                 .ToListAsync();
         }
 
-        public async Task<Pagina> BuscarPorIdAsync(int id)
+        public async Task<Pagina> ObterPorIdAsync(int id)
         {
             return await _context.Paginas
                 .Include(p => p.Botoes)
@@ -46,21 +45,14 @@ namespace Paginas.Infrastructure.Repositories
             _context.Paginas.Update(pagina);
         }
 
-        public async Task ExcluirAsync(Pagina pagina)
+        public async Task RemoverAsync(Pagina pagina)
         {
-            // Exclui os botões da página
             _context.Botoes.RemoveRange(pagina.Botoes);
 
-            // Exclui os botões dos tópicos também
             foreach (var topico in pagina.PaginaFilhos)
-            {
                 _context.Botoes.RemoveRange(topico.Botoes);
-            }
 
-            // Exclui os tópicos filhos
             _context.Paginas.RemoveRange(pagina.PaginaFilhos);
-
-            // Exclui a própria página
             _context.Paginas.Remove(pagina);
         }
 
@@ -72,7 +64,7 @@ namespace Paginas.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task SalvarAsync()
+        public async Task SalvarAlteracoesAsync()
         {
             await _context.SaveChangesAsync();
         }

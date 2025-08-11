@@ -3,6 +3,7 @@ using Paginas.Domain.Entities;
 using Paginas.Domain.Repositories.Interfaces;
 using Paginas.Infrastructure.Data.Context;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Paginas.Infrastructure.Repositories
@@ -18,12 +19,20 @@ namespace Paginas.Infrastructure.Repositories
 
         public async Task<Botao> ObterPorIdAsync(int id)
         {
-            return await _context.Botoes.FirstOrDefaultAsync(b => b.Codigo == id);
+            return await _context.Botoes
+                .FirstOrDefaultAsync(b => b.Codigo == id);
         }
 
-        public async Task<List<Botao>> ListarAsync()
+        public async Task<List<Botao>> ListarTodosAsync()
         {
             return await _context.Botoes.ToListAsync();
+        }
+
+        public async Task<List<Botao>> ListarPorPaginaAsync(int cdPagina)
+        {
+            return await _context.Botoes
+                .Where(b => b.CdPaginaIntrodutoria == cdPagina)
+                .ToListAsync();
         }
 
         public async Task AdicionarAsync(Botao botao)
@@ -34,20 +43,16 @@ namespace Paginas.Infrastructure.Repositories
         public async Task AtualizarAsync(Botao botao)
         {
             _context.Botoes.Update(botao);
-            await SalvarAsync();
         }
 
-        public async Task ExcluirAsync(int id)
+        public async Task RemoverAsync(int id)
         {
             var botao = await ObterPorIdAsync(id);
             if (botao != null)
-            {
                 _context.Botoes.Remove(botao);
-                await SalvarAsync();
-            }
         }
 
-        public async Task SalvarAsync()
+        public async Task SalvarAlteracoesAsync()
         {
             await _context.SaveChangesAsync();
         }

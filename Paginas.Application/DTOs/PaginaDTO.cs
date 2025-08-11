@@ -1,34 +1,31 @@
-﻿using System.Collections.Generic;
+﻿// Application/DTOs/PaginaDTO.cs
+using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using Paginas.Domain.Entities;
 
 namespace Paginas.Application.DTOs
 {
     public class PaginaDTO
     {
-        public int? Codigo { get; set; }
+        public int Codigo { get; set; }
 
         [Required(ErrorMessage = "O título é obrigatório.")]
         public string Titulo { get; set; }
 
         public string Conteudo { get; set; }
         public string Url { get; set; }
-
-        public string Banner { get; set; }  // Caminho ou nome do arquivo
-        public byte[] BannerBytes { get; set; }  // Conteúdo do arquivo (se necessário)
-
-        public List<BotaoDTO> Botoes { get; set; } = new();
-        public List<TopicoDTO> Topicos { get; set; } = new();
+        public int Tipo { get; set; } // TipoPagina como int
         public int? CdPai { get; set; }
-    }
-
-    public class TopicoDTO
-    {
-        [Required(ErrorMessage = "O título do tópico é obrigatório.")]
-        public string Titulo { get; set; }
-        public string Conteudo { get; set; }
-        public string Url { get; set; }
+        public bool Publicacao { get; set; }
+        public bool Status { get; set; }
+        public int Ordem { get; set; }
+        public int Versao { get; set; }
         public string Banner { get; set; }
+        public byte[] BannerBytes { get; set; }
+        public DateTime Criacao { get; set; }
+        public DateTime? Atualizacao { get; set; }
+
         public List<BotaoDTO> Botoes { get; set; } = new();
+        public List<PaginaDTO> PaginaFilhos { get; set; } = new();
     }
 }
