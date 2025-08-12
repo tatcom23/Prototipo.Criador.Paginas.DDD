@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Paginas.Application.DTOs;
 using Paginas.Application.Services.Interfaces;
+using Paginas.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -44,7 +45,8 @@ namespace Paginas.Web.Controllers
                 model.Banner = "/imagens/" + nomeBanner;
             }
 
-            await _paginaService.CriarAsync(model);
+            // Passa o webRootPath conforme a assinatura atual do serviço
+            await _paginaService.CriarAsync(model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página criada com sucesso!";
             return RedirectToAction("Listar");
@@ -117,7 +119,8 @@ namespace Paginas.Web.Controllers
                 model.Banner = paginaExistente.Banner;
             }
 
-            await _paginaService.AtualizarAsync(id, model);
+            // Passa o webRootPath para atualizar
+            await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página atualizada com sucesso!";
             return RedirectToAction("Listar");
@@ -147,14 +150,21 @@ namespace Paginas.Web.Controllers
         public async Task<IActionResult> Exibir(string url)
         {
             var pagina = (await _paginaService.ListarAsync())
-                .FirstOrDefault(p => p.Url == url && p.Tipo == 1);
+                .FirstOrDefault(p => p.Url == url && p.Tipo == TipoPagina.Principal);
 
             if (pagina == null)
                 return NotFound();
 
-            pagina.PaginaFilhos = (await _paginaService.ListarAsync())
+            var filhos = (await _paginaService.ListarAsync())
                 .Where(p => p.CdPai == pagina.Codigo)
                 .ToList();
+
+            pagina.PaginaFilhos.Clear();
+            foreach (var filho in filhos)
+            {
+                pagina.PaginaFilhos.Add(filho);
+            }
+
 
             return View("Exibir", pagina);
         }

@@ -1,5 +1,4 @@
-﻿// Domain/Entities/Botao.cs
-using System;
+﻿using System;
 using Paginas.Domain.Enums;
 
 namespace Paginas.Domain.Entities
@@ -21,7 +20,7 @@ namespace Paginas.Domain.Entities
         // Navegação
         public Pagina Pagina { get; private set; }
 
-        protected Botao() { } // EF Core
+        public Botao() { } // EF Core e testes
 
         public Botao(string nome, string link, TipoBotao tipo, int cdPaginaIntrodutoria, int linha, int coluna)
         {
@@ -36,29 +35,10 @@ namespace Paginas.Domain.Entities
             Versao = 1;
         }
 
-        // ✅ Método estático para criar Botao a partir de BotaoDTO
-        public static Botao FromDTO(Application.DTOs.BotaoDTO dto)
+        public Botao(int codigo, string nome, string link, TipoBotao tipo, int cdPaginaIntrodutoria, int linha, int coluna)
+            : this(nome, link, tipo, cdPaginaIntrodutoria, linha, coluna)
         {
-            if (dto == null) return null;
-
-            var botao = new Botao(
-                nome: dto.Nome,
-                link: dto.Link,
-                tipo: (TipoBotao)dto.Tipo,
-                cdPaginaIntrodutoria: dto.CdPaginaIntrodutoria,
-                linha: dto.Linha,
-                coluna: dto.Coluna
-            );
-
-            // Usar reflection ou métodos internos para setar campos privados
-            // Como setters são privados, só podemos setar via reflection ou se estiver no mesmo assembly
-            typeof(Botao).GetProperty(nameof(Codigo))?.SetValue(botao, dto.Codigo);
-            typeof(Botao).GetProperty(nameof(Criacao))?.SetValue(botao, dto.Criacao);
-            typeof(Botao).GetProperty(nameof(Atualizacao))?.SetValue(botao, dto.Atualizacao);
-            typeof(Botao).GetProperty(nameof(Status))?.SetValue(botao, dto.Status);
-            typeof(Botao).GetProperty(nameof(Versao))?.SetValue(botao, dto.Versao);
-
-            return botao;
+            Codigo = codigo;
         }
 
         public void Atualizar(string nome, string link, TipoBotao tipo, int linha, int coluna)

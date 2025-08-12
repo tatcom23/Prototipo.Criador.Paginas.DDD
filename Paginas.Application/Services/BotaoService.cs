@@ -1,7 +1,9 @@
-﻿using Paginas.Application.Services.Interfaces;
-using System.Threading.Tasks;
-using Paginas.Domain.Repositories.Interfaces;
+﻿using Paginas.Application.DTOs;
+using Paginas.Application.Services.Interfaces;
 using Paginas.Domain.Entities;
+using Paginas.Domain.Enums;
+using Paginas.Domain.Repositories.Interfaces;
+using System.Threading.Tasks;
 
 namespace Paginas.Application.Services
 {
@@ -26,7 +28,7 @@ namespace Paginas.Application.Services
                 Link = botao.Link,
                 Linha = botao.Linha,
                 Coluna = botao.Coluna,
-                Tipo = botao.Tipo,
+                Tipo = (int)botao.Tipo, // conversão enum para int
                 Status = botao.Status,
                 CdPaginaIntrodutoria = botao.CdPaginaIntrodutoria
             };
@@ -37,21 +39,20 @@ namespace Paginas.Application.Services
             var botao = await _repository.ObterPorIdAsync(dto.Codigo);
             if (botao == null) return;
 
-            botao.Nome = dto.Nome;
-            botao.Link = dto.Link;
-            botao.Linha = dto.Linha;
-            botao.Coluna = dto.Coluna;
-            botao.Tipo = dto.Tipo;
-            botao.Status = dto.Status;
-            botao.CdPaginaIntrodutoria = dto.CdPaginaIntrodutoria;
-            botao.Atualizacao = System.DateTime.Now;
+            // converte int para enum no método Atualizar da entidade
+            botao.Atualizar(dto.Nome, dto.Link, (TipoBotao)dto.Tipo, dto.Linha, dto.Coluna);
+
+            if (dto.Status)
+                botao.Ativar();
+            else
+                botao.Desativar();
 
             await _repository.AtualizarAsync(botao);
         }
 
         public async Task ExcluirAsync(int id)
         {
-            await _repository.ExcluirAsync(id);
+            await _repository.RemoverAsync(id);
         }
     }
 }

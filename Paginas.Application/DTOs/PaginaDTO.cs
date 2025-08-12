@@ -1,5 +1,4 @@
-﻿// Application/DTOs/PaginaDTO.cs
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 
@@ -14,7 +13,7 @@ namespace Paginas.Application.DTOs
 
         public string Conteudo { get; set; }
         public string Url { get; set; }
-        public int Tipo { get; set; } // TipoPagina como int
+        public int Tipo { get; set; } 
         public int? CdPai { get; set; }
         public bool Publicacao { get; set; }
         public bool Status { get; set; }

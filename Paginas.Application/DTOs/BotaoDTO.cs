@@ -1,5 +1,5 @@
-﻿// Application/DTOs/BotaoDTO.cs
-using System;
+﻿using System;
+using Paginas.Domain.Enums; // Importa o namespace do enum
 
 namespace Paginas.Application.DTOs
 {
@@ -8,7 +8,7 @@ namespace Paginas.Application.DTOs
         public int Codigo { get; set; }
         public string Nome { get; set; }
         public string Link { get; set; }
-        public int Tipo { get; set; } // TipoBotao como int
+        public int Tipo { get; set; }  // int aqui
         public int CdPaginaIntrodutoria { get; set; }
         public int Linha { get; set; }
         public int Coluna { get; set; }
@@ -17,4 +17,5 @@ namespace Paginas.Application.DTOs
         public DateTime Criacao { get; set; }
         public DateTime? Atualizacao { get; set; }
     }
+
 }

@@ -3,13 +3,15 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.34407.143
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CriadorPaginas.WebSite", "CriadorPaginas.WebSite\CriadorPaginas.WebSite.csproj", "{8F8CD672-7DA7-4DDA-B1AC-532C9455CD4D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CriadorPaginas.WebSite", "CriadorPaginas.WebSite\CriadorPaginas.WebSite.csproj", "{8F8CD672-7DA7-4DDA-B1AC-532C9455CD4D}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paginas.Domain", "Paginas.Domain\Paginas.Domain.csproj", "{85D5D4AB-7411-45BC-A543-B1C2E5BE1CB5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paginas.Domain", "Paginas.Domain\Paginas.Domain.csproj", "{85D5D4AB-7411-45BC-A543-B1C2E5BE1CB5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paginas.Application", "Paginas.Application\Paginas.Application.csproj", "{4E557183-B529-4FBE-BE7F-EF964D144B74}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paginas.Application", "Paginas.Application\Paginas.Application.csproj", "{4E557183-B529-4FBE-BE7F-EF964D144B74}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paginas.Infrastructure", "Paginas.Infrastructure\Paginas.Infrastructure.csproj", "{91559D33-C7E9-4E8D-AE54-4A32B62A1A30}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paginas.Infrastructure", "Paginas.Infrastructure\Paginas.Infrastructure.csproj", "{91559D33-C7E9-4E8D-AE54-4A32B62A1A30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paginas.Infrastructure.Tests", "Paginas.Infrastructure.Tests\Paginas.Infrastructure.Tests.csproj", "{214313FC-5AAE-4C9F-89CC-FC723BC4E85F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{91559D33-C7E9-4E8D-AE54-4A32B62A1A30}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{91559D33-C7E9-4E8D-AE54-4A32B62A1A30}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{91559D33-C7E9-4E8D-AE54-4A32B62A1A30}.Release|Any CPU.Build.0 = Release|Any CPU
+		{214313FC-5AAE-4C9F-89CC-FC723BC4E85F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{214313FC-5AAE-4C9F-89CC-FC723BC4E85F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{214313FC-5AAE-4C9F-89CC-FC723BC4E85F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{214313FC-5AAE-4C9F-89CC-FC723BC4E85F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

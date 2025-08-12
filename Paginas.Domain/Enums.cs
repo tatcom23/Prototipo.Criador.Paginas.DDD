@@ -9,8 +9,7 @@
 
     public enum TipoPagina
     {
-        Introdutoria = 1,
-        Secao = 2,
-        Artigo = 3
+        Principal = 1,
+        Topico = 2
     }
 }

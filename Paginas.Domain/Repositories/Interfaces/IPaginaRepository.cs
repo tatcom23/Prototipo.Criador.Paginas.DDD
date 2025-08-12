@@ -15,4 +15,3 @@ namespace Paginas.Domain.Repositories.Interfaces
         Task SalvarAlteracoesAsync();
     }
 }
-
