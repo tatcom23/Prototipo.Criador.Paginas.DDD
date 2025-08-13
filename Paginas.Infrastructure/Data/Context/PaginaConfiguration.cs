@@ -11,10 +11,12 @@ namespace Paginas.Infrastructure.Data.Configurations
             builder.ToTable("tbPaginaIntrodutoria");
 
             builder.HasKey(p => p.Codigo);
+
             builder.Property(p => p.Codigo)
                 .HasColumnName("cd_pagina_introdutoria")
                 .HasColumnType("int")
-                .IsRequired();
+                .IsRequired()
+                .ValueGeneratedOnAdd(); // <-- importante
 
             builder.Property(p => p.Titulo)
                 .HasColumnName("nm_titulo_pagina_introdutoria")
@@ -69,15 +71,17 @@ namespace Paginas.Infrastructure.Data.Configurations
                 .HasColumnName("cd_versao_pagina_introdutoria")
                 .HasColumnType("int");
 
-            // Relacionamento: Pagina -> Botoes
+            // Relacionamento: Pagina -> Botoes (1:N) com cascade para limpeza em testes
             builder.HasMany(p => p.Botoes)
                 .WithOne(b => b.Pagina)
-                .HasForeignKey(b => b.CdPaginaIntrodutoria);
+                .HasForeignKey(b => b.CdPaginaIntrodutoria)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            // Relacionamento páginas pai-filho
+            // Relacionamento páginas pai-filho (auto-relacionamento)
             builder.HasMany(p => p.PaginaFilhos)
                 .WithOne(p => p.PaginaPai)
-                .HasForeignKey(p => p.CdPai);
+                .HasForeignKey(p => p.CdPai)
+                .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

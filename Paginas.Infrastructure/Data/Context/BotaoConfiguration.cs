@@ -11,15 +11,16 @@ namespace Paginas.Infrastructure.Data.Configurations
             builder.ToTable("tbBotaoPaginaIntrodutoria");
 
             builder.HasKey(b => b.Codigo);
+
             builder.Property(b => b.Codigo)
                 .HasColumnName("cd_botao_pagina_introdutoria")
                 .HasColumnType("int")
-                .IsRequired();
+                .IsRequired()
+                .ValueGeneratedOnAdd(); // <-- importante
 
             builder.Property(b => b.Nome)
                 .HasColumnName("nm_botao_pagina_introdutoria")
-                .HasColumnType("varchar(150)")
-                .IsRequired();
+                .HasColumnType("varchar(200)");
 
             builder.Property(b => b.Link)
                 .HasColumnName("ds_link_botao_pagina_introdutoria")
@@ -56,6 +57,12 @@ namespace Paginas.Infrastructure.Data.Configurations
             builder.Property(b => b.Versao)
                 .HasColumnName("cd_versao_botao_pagina_introdutoria")
                 .HasColumnType("int");
+
+            // FK configurada no PaginaConfiguration, mas deixamos claro aqui também (opcional)
+            builder.HasOne(b => b.Pagina)
+                   .WithMany(p => p.Botoes)
+                   .HasForeignKey(b => b.CdPaginaIntrodutoria)
+                   .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

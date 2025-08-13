@@ -21,7 +21,7 @@ namespace Paginas.Infrastructure.Tests.Entities
             Assert.False(pagina.Publicacao);
             Assert.Equal(0, pagina.Ordem);
             Assert.Equal(1, pagina.Versao);
-            Assert.NotEqual(default, pagina.Criacao);
+            Assert.NotEqual(default(DateTime), pagina.Criacao);
             Assert.Null(pagina.Atualizacao);
             Assert.NotNull(pagina.Botoes);
             Assert.Empty(pagina.Botoes);
@@ -73,6 +73,8 @@ namespace Paginas.Infrastructure.Tests.Entities
         {
             var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
 
+            // Observação: aqui usamos cdPaginaIntrodutoria = 1 apenas para construir o botão.
+            // Em cenários reais o EF vai preencher a FK após salvar a página.
             var botao = new Botao("Nome Botão", "https://link.com", TipoBotao.Primario, 1, 1, 1);
 
             pagina.AdicionarBotao(botao);

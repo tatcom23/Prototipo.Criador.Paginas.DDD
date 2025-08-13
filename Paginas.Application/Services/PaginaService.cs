@@ -3,9 +3,7 @@ using Paginas.Application.Services.Interfaces;
 using Paginas.Domain.Entities;
 using Paginas.Domain.Enums;
 using Paginas.Domain.Repositories.Interfaces;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -30,8 +28,10 @@ namespace Paginas.Application.Services
             return await _repo.ObterPorIdAsync(id);
         }
 
+        // Fluxo corrigido: salva a página, depois adiciona botões (já com PK), idem para filhos
         public async Task CriarAsync(PaginaDTO model, string webRootPath)
         {
+            // 1) Cria a página sem botões
             var pagina = new Pagina(
                 model.Titulo,
                 model.Conteudo,
@@ -40,66 +40,74 @@ namespace Paginas.Application.Services
                 null
             );
 
-            if (model.Botoes != null)
+            await _repo.AdicionarAsync(pagina);
+            await _repo.SalvarAlteracoesAsync(); // Gera pagina.Codigo
+
+            // 2) Adiciona botões agora que a PK existe
+            if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var botaoVm in model.Botoes)
                 {
-                    if (!string.IsNullOrWhiteSpace(botaoVm.Nome) && !string.IsNullOrWhiteSpace(botaoVm.Link))
-                    {
-                        var botao = new Botao(
-                            botaoVm.Nome,
-                            botaoVm.Link,
-                            TipoBotao.Primario,  // <-- Usar valor válido do enum
-                            pagina.Codigo,
-                            botaoVm.Linha,
-                            botaoVm.Coluna
-                        );
-                        pagina.AdicionarBotao(botao);
-                    }
+                    if (string.IsNullOrWhiteSpace(botaoVm.Nome) || string.IsNullOrWhiteSpace(botaoVm.Link))
+                        continue;
+
+                    var botao = new Botao(
+                        botaoVm.Nome,
+                        botaoVm.Link,
+                        TipoBotao.Primario,   // ajuste se vier do DTO
+                        pagina.Codigo,        // FK correta
+                        botaoVm.Linha,
+                        botaoVm.Coluna
+                    );
+
+                    pagina.AdicionarBotao(botao);
                 }
+
+                await _repo.AtualizarAsync(pagina);
+                await _repo.SalvarAlteracoesAsync();
             }
 
-            await _repo.AdicionarAsync(pagina);
-            await _repo.SalvarAlteracoesAsync();
-
+            // 3) Cria filhos (tópicos) e aplica o mesmo padrão
             if (model.PaginaFilhos != null && model.PaginaFilhos.Any())
             {
-                int ordemAtual = 1;
-
                 foreach (var topico in model.PaginaFilhos)
                 {
+                    // 3.1) Subpágina sem botões
                     var subpagina = new Pagina(
                         topico.Titulo,
                         topico.Conteudo,
                         topico.Url,
                         TipoPagina.Topico,
-                        pagina.Codigo
+                        pagina.Codigo // define o pai
                     );
 
-                    if (topico.Botoes != null)
+                    await _repo.AdicionarAsync(subpagina);
+                    await _repo.SalvarAlteracoesAsync(); // Gera subpagina.Codigo
+
+                    // 3.2) Agora adiciona os botões da subpágina
+                    if (topico.Botoes != null && topico.Botoes.Any())
                     {
                         foreach (var b in topico.Botoes)
                         {
-                            if (!string.IsNullOrWhiteSpace(b.Nome) && !string.IsNullOrWhiteSpace(b.Link))
-                            {
-                                var botao = new Botao(
-                                    b.Nome,
-                                    b.Link,
-                                    TipoBotao.Primario,  // <-- Usar valor válido do enum
-                                    subpagina.Codigo,
-                                    b.Linha,
-                                    b.Coluna
-                                );
-                                subpagina.AdicionarBotao(botao);
-                            }
+                            if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link))
+                                continue;
+
+                            var botao = new Botao(
+                                b.Nome,
+                                b.Link,
+                                TipoBotao.Primario,   // ajuste se vier do DTO
+                                subpagina.Codigo,     // FK da subpágina
+                                b.Linha,
+                                b.Coluna
+                            );
+
+                            subpagina.AdicionarBotao(botao);
                         }
+
+                        await _repo.AtualizarAsync(subpagina);
+                        await _repo.SalvarAlteracoesAsync();
                     }
-
-                    await _repo.AdicionarAsync(subpagina);
-                    ordemAtual++;
                 }
-
-                await _repo.SalvarAlteracoesAsync();
             }
         }
 
@@ -110,22 +118,24 @@ namespace Paginas.Application.Services
 
             pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, pagina.Tipo);
 
-            if (model.Botoes != null)
+            // Se chegarem botões novos no update, adiciona (PK do pai já existe)
+            if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
                 {
-                    if (!string.IsNullOrWhiteSpace(b.Nome) && !string.IsNullOrWhiteSpace(b.Link))
-                    {
-                        var botao = new Botao(
-                            b.Nome,
-                            b.Link,
-                            TipoBotao.Primario,  // <-- Usar valor válido do enum
-                            pagina.Codigo,
-                            b.Linha,
-                            b.Coluna
-                        );
-                        pagina.AdicionarBotao(botao);
-                    }
+                    if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link))
+                        continue;
+
+                    var botao = new Botao(
+                        b.Nome,
+                        b.Link,
+                        TipoBotao.Primario,
+                        pagina.Codigo,  // FK do pai já existente
+                        b.Linha,
+                        b.Coluna
+                    );
+
+                    pagina.AdicionarBotao(botao);
                 }
             }
 
@@ -135,9 +145,7 @@ namespace Paginas.Application.Services
 
         public async Task CriarComPaiAsync(PaginaDTO model, int cdPai)
         {
-            var paginasFilhas = await _repo.ListarFilhosAsync(cdPai);
-            int ordemAtualMax = paginasFilhas.Any() ? paginasFilhas.Max(p => p.Ordem) : 0;
-
+            // Pode calcular ordem se necessário (já tem método AtualizarOrdem no agregado)
             var pagina = new Pagina(
                 model.Titulo,
                 model.Conteudo,
@@ -157,6 +165,7 @@ namespace Paginas.Application.Services
 
             var cdPai = pagina.CdPai;
 
+            // Se for página principal, remove filhos antes
             if (cdPai == null)
             {
                 var topicos = (await _repo.ListarFilhosAsync(pagina.Codigo)).ToList();
@@ -172,6 +181,7 @@ namespace Paginas.Application.Services
             await _repo.RemoverAsync(pagina);
             await _repo.SalvarAlteracoesAsync();
 
+            // Reordena irmãos se a excluída era filha
             if (cdPai != null)
             {
                 var topicos = (await _repo.ListarFilhosAsync(cdPai.Value)).OrderBy(p => p.Ordem).ToList();
@@ -183,7 +193,6 @@ namespace Paginas.Application.Services
 
                 await _repo.SalvarAlteracoesAsync();
             }
-
         }
 
         public async Task AtualizarOrdemAsync(Pagina a, Pagina b)
