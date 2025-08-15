@@ -16,7 +16,7 @@
         </button>
     </div>
     <div class="card-body" id="pagina-@pagina.Codigo" style="display: none;">
-        <p><strong>Conteúdo:</strong> @pagina.Conteudo</p>
+        <p><strong>Conteúdo:</strong> @Html.Raw(pagina.Conteudo)</p>
         <p><strong>URL:</strong> @pagina.Url</p>
         <p><strong>Banner:</strong> @pagina.Banner</p>
 
@@ -26,11 +26,16 @@
 <ul>
     @foreach (var botao in pagina.Botoes)
     {
-<li>
-    <strong>@botao.Nome</strong> → <a href="@botao.Link" target="_blank">@botao.Link</a>
-    (Linha: @botao.Linha, Coluna: @botao.Coluna)
-    <a asp-controller="Botao" asp-action="Editar" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-warning ms-2">✏️</a>
-    <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-danger ms-1">🗑️</a>
+<li class="mb-2">
+    <strong>@botao.Nome</strong>
+    &nbsp;→&nbsp;
+    <a href="@botao.Link" target="_blank">@botao.Link</a>
+    <small class="text-muted"> (Linha: @botao.Linha, Coluna: @botao.Coluna)</small>
+
+    <div class="mt-1">
+        <a asp-controller="Botao" asp-action="Editar" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-warning ms-2">✏️</a>
+        <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-danger ms-1">🗑️</a>
+    </div>
 </li>                    }
 </ul> }
                 else
@@ -38,6 +43,7 @@
 <p><em>Sem botões.</em></p>}
 
         <h5 class="mt-4">Tópicos</h5>
+
         @if (pagina.PaginaFilhos != null && pagina.PaginaFilhos.Any())
         {
 @for (int i = 0; i < pagina.PaginaFilhos.Count; i++)
@@ -47,17 +53,27 @@
     <hr />
     <h6><strong>Tópico:</strong> @topico.Titulo</h6>
     <p><strong>Ordem:</strong> @topico.Ordem</p>
-    <p><strong>Conteúdo:</strong> @topico.Conteudo</p>
+    <p><strong>Conteúdo:</strong> @Html.Raw(topico.Conteudo)</p>
     <p><strong>URL:</strong> @topico.Url</p>
     <p><strong>Banner:</strong> @topico.Banner</p>
 
     <div class="mb-2">
+        @* Botões de mover (implemente as actions em PaginaController se desejar) *@
         @if (i > 0)
         {
-<a asp-controller="Pagina" asp-action="MoverParaCima" asp-route-id="@topico.Codigo" class="btn btn-sm btn-outline-secondary">🔼</a>}
+<form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
+    <input type="hidden" name="idA" value="@pagina.PaginaFilhos[i].Codigo" />
+    <input type="hidden" name="idB" value="@pagina.PaginaFilhos[i-1].Codigo" />
+    <button type="submit" class="btn btn-sm btn-outline-secondary">🔼</button>
+</form>}
         @if (i < pagina.PaginaFilhos.Count - 1)
         {
-<a asp-controller="Pagina" asp-action="MoverParaBaixo" asp-route-id="@topico.Codigo" class="btn btn-sm btn-outline-secondary ms-1">🔽</a>}
+<form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline ms-1">
+    <input type="hidden" name="idA" value="@pagina.PaginaFilhos[i].Codigo" />
+    <input type="hidden" name="idB" value="@pagina.PaginaFilhos[i+1].Codigo" />
+    <button type="submit" class="btn btn-sm btn-outline-secondary">🔽</button>
+</form>}
+
         <a asp-action="Editar" asp-route-id="@topico.Codigo" class="btn btn-sm btn-warning ms-2">✏️ Editar</a>
         <a asp-action="Excluir" asp-route-id="@topico.Codigo" class="btn btn-sm btn-danger ms-1">🗑️ Excluir</a>
     </div>
@@ -70,7 +86,7 @@
     {
 <li>
     <strong>@b.Nome</strong> → <a href="@b.Link" target="_blank">@b.Link</a>
-    (Linha: @b.Linha, Coluna: @b.Coluna)
+    <small class="text-muted"> (Linha: @b.Linha, Coluna: @b.Coluna)</small>
     <a asp-controller="Botao" asp-action="Editar" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-warning ms-2">✏️</a>
     <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-danger ms-1">🗑️</a>
 </li>}
@@ -94,7 +110,8 @@
 </div>}
 
 @section Scripts {
-    <script>document.querySelectorAll('.toggle-content').forEach(button => {
+    <script>
+        document.querySelectorAll('.toggle-content').forEach(button => {
             button.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
                 const content = document.getElementById(targetId);
@@ -112,5 +129,6 @@
                     this.classList.add('btn-dark');
                 }
             });
-        });</script>
+        });
+    </script>
 }

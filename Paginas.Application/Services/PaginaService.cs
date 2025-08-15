@@ -1,8 +1,11 @@
-﻿using Paginas.Application.DTOs;
+﻿// Application -> Services -> PaginaService.cs
+using Paginas.Application.DTOs;
+using Paginas.Application.Mappers;
 using Paginas.Application.Services.Interfaces;
 using Paginas.Domain.Entities;
 using Paginas.Domain.Enums;
 using Paginas.Domain.Repositories.Interfaces;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -18,46 +21,60 @@ namespace Paginas.Application.Services
             _repo = repo;
         }
 
-        public async Task<List<Pagina>> ListarAsync()
+        // Retorna DTOs
+        public async Task<List<PaginaDTO>> ListarAsync()
         {
-            return await _repo.ListarTodasAsync();
+            var entidades = await _repo.ListarTodasAsync();
+            return entidades.Select(e => e.ToDTO()).ToList();
         }
 
-        public async Task<Pagina> BuscarPorIdAsync(int id)
+        public async Task<List<PaginaDTO>> ListarFilhosAsync(int cdPai)
         {
-            return await _repo.ObterPorIdAsync(id);
+            var filhos = await _repo.ListarFilhosAsync(cdPai);
+            return filhos.Select(e => e.ToDTO()).ToList();
         }
 
-        // Fluxo corrigido: salva a página, depois adiciona botões (já com PK), idem para filhos
+        public async Task<PaginaDTO> BuscarPorIdAsync(int id)
+        {
+            var entidade = await _repo.ObterPorIdAsync(id);
+            return entidade?.ToDTO();
+        }
+
+        // Criação: constrói a entidade com construtor do domínio; salva; depois adiciona botões/filhos
         public async Task CriarAsync(PaginaDTO model, string webRootPath)
         {
-            // 1) Cria a página sem botões
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
+            // se CdPai tiver valor, forçamos Topico; senão usa o tipo informado no DTO
+            var tipo = model.CdPai.HasValue ? TipoPagina.Topico : (TipoPagina)model.Tipo;
+
             var pagina = new Pagina(
                 model.Titulo,
                 model.Conteudo,
                 model.Url,
-                TipoPagina.Principal,
-                null
+                tipo,
+                model.CdPai
             );
 
+            // Persistir a página para gerar PK
             await _repo.AdicionarAsync(pagina);
-            await _repo.SalvarAlteracoesAsync(); // Gera pagina.Codigo
+            await _repo.SalvarAlteracoesAsync(); // garante pagina.Codigo
 
-            // 2) Adiciona botões agora que a PK existe
+            // Botões da página (após PK existir)
             if (model.Botoes != null && model.Botoes.Any())
             {
-                foreach (var botaoVm in model.Botoes)
+                foreach (var b in model.Botoes)
                 {
-                    if (string.IsNullOrWhiteSpace(botaoVm.Nome) || string.IsNullOrWhiteSpace(botaoVm.Link))
+                    if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link))
                         continue;
 
                     var botao = new Botao(
-                        botaoVm.Nome,
-                        botaoVm.Link,
-                        TipoBotao.Primario,   // ajuste se vier do DTO
-                        pagina.Codigo,        // FK correta
-                        botaoVm.Linha,
-                        botaoVm.Coluna
+                        b.Nome,
+                        b.Link,
+                        TipoBotao.Primario,     // ajuste se seu DTO trouxer o tipo
+                        pagina.Codigo,
+                        b.Linha,
+                        b.Coluna
                     );
 
                     pagina.AdicionarBotao(botao);
@@ -67,24 +84,24 @@ namespace Paginas.Application.Services
                 await _repo.SalvarAlteracoesAsync();
             }
 
-            // 3) Cria filhos (tópicos) e aplica o mesmo padrão
+            // Filhos (tópicos)
             if (model.PaginaFilhos != null && model.PaginaFilhos.Any())
             {
                 foreach (var topico in model.PaginaFilhos)
                 {
-                    // 3.1) Subpágina sem botões
-                    var subpagina = new Pagina(
+                    // define subpágina sempre como Topico
+                    var sub = new Pagina(
                         topico.Titulo,
                         topico.Conteudo,
                         topico.Url,
                         TipoPagina.Topico,
-                        pagina.Codigo // define o pai
+                        pagina.Codigo
                     );
 
-                    await _repo.AdicionarAsync(subpagina);
-                    await _repo.SalvarAlteracoesAsync(); // Gera subpagina.Codigo
+                    await _repo.AdicionarAsync(sub);
+                    await _repo.SalvarAlteracoesAsync();
 
-                    // 3.2) Agora adiciona os botões da subpágina
+                    // Botões do subtopico (após PK do sub existir)
                     if (topico.Botoes != null && topico.Botoes.Any())
                     {
                         foreach (var b in topico.Botoes)
@@ -95,30 +112,39 @@ namespace Paginas.Application.Services
                             var botao = new Botao(
                                 b.Nome,
                                 b.Link,
-                                TipoBotao.Primario,   // ajuste se vier do DTO
-                                subpagina.Codigo,     // FK da subpágina
+                                TipoBotao.Primario,
+                                sub.Codigo,
                                 b.Linha,
                                 b.Coluna
                             );
 
-                            subpagina.AdicionarBotao(botao);
+                            sub.AdicionarBotao(botao);
                         }
 
-                        await _repo.AtualizarAsync(subpagina);
+                        await _repo.AtualizarAsync(sub);
                         await _repo.SalvarAlteracoesAsync();
                     }
                 }
             }
         }
 
+        // Atualização: busca entidade e usa métodos do domínio
         public async Task AtualizarAsync(int id, PaginaDTO model, string webRootPath)
         {
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
             var pagina = await _repo.ObterPorIdAsync(id);
             if (pagina == null) return;
 
-            pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, pagina.Tipo);
+            // Atualiza campos principais; mantém o tipo atual da entidade
+            var tipo = pagina.Tipo; // manter tipo atual; se quiser permitir mudança, use (TipoPagina)model.Tipo
+            pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, tipo);
 
-            // Se chegarem botões novos no update, adiciona (PK do pai já existe)
+            // Publicação/Status através de métodos do domínio
+            if (model.Publicacao) pagina.Publicar(); else pagina.Despublicar();
+            if (model.Status) pagina.Ativar(); else pagina.Desativar();
+
+            // Novos botões (se enviados no update)
             if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
@@ -130,7 +156,7 @@ namespace Paginas.Application.Services
                         b.Nome,
                         b.Link,
                         TipoBotao.Primario,
-                        pagina.Codigo,  // FK do pai já existente
+                        pagina.Codigo,
                         b.Linha,
                         b.Coluna
                     );
@@ -143,10 +169,12 @@ namespace Paginas.Application.Services
             await _repo.SalvarAlteracoesAsync();
         }
 
+        // Cria uma subpágina (tópico) com pai informado
         public async Task CriarComPaiAsync(PaginaDTO model, int cdPai)
         {
-            // Pode calcular ordem se necessário (já tem método AtualizarOrdem no agregado)
-            var pagina = new Pagina(
+            if (model == null) throw new ArgumentNullException(nameof(model));
+
+            var sub = new Pagina(
                 model.Titulo,
                 model.Conteudo,
                 model.Url,
@@ -154,8 +182,32 @@ namespace Paginas.Application.Services
                 cdPai
             );
 
-            await _repo.AdicionarAsync(pagina);
+            await _repo.AdicionarAsync(sub);
             await _repo.SalvarAlteracoesAsync();
+
+            // Se vierem botões para o tópico, adiciona-os
+            if (model.Botoes != null && model.Botoes.Any())
+            {
+                foreach (var b in model.Botoes)
+                {
+                    if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link))
+                        continue;
+
+                    var botao = new Botao(
+                        b.Nome,
+                        b.Link,
+                        TipoBotao.Primario,
+                        sub.Codigo,
+                        b.Linha,
+                        b.Coluna
+                    );
+
+                    sub.AdicionarBotao(botao);
+                }
+
+                await _repo.AtualizarAsync(sub);
+                await _repo.SalvarAlteracoesAsync();
+            }
         }
 
         public async Task ExcluirAsync(int id)
@@ -170,10 +222,10 @@ namespace Paginas.Application.Services
             {
                 var topicos = (await _repo.ListarFilhosAsync(pagina.Codigo)).ToList();
 
-                foreach (var topico in topicos)
+                foreach (var t in topicos)
                 {
-                    topico.Botoes?.Clear();
-                    await _repo.RemoverAsync(topico);
+                    t.Botoes?.Clear();
+                    await _repo.RemoverAsync(t);
                 }
             }
 
@@ -181,22 +233,33 @@ namespace Paginas.Application.Services
             await _repo.RemoverAsync(pagina);
             await _repo.SalvarAlteracoesAsync();
 
-            // Reordena irmãos se a excluída era filha
+            // Se removeu um tópico (cdPai != null), reordena os irmãos
             if (cdPai != null)
             {
-                var topicos = (await _repo.ListarFilhosAsync(cdPai.Value)).OrderBy(p => p.Ordem).ToList();
+                var topicos = (await _repo.ListarFilhosAsync(cdPai.Value))
+                              .OrderBy(p => p.Ordem)
+                              .ToList();
 
                 for (int i = 0; i < topicos.Count; i++)
-                {
                     topicos[i].AtualizarOrdem(i + 1);
-                }
 
                 await _repo.SalvarAlteracoesAsync();
             }
         }
 
-        public async Task AtualizarOrdemAsync(Pagina a, Pagina b)
+        // Atualiza ordem entre duas páginas (identificadas por id)
+        public async Task AtualizarOrdemAsync(int idA, int idB)
         {
+            var a = await _repo.ObterPorIdAsync(idA);
+            var b = await _repo.ObterPorIdAsync(idB);
+            if (a == null || b == null) return;
+
+            var ordemA = a.Ordem;
+            var ordemB = b.Ordem;
+
+            a.AtualizarOrdem(ordemB);
+            b.AtualizarOrdem(ordemA);
+
             await _repo.AtualizarAsync(a);
             await _repo.AtualizarAsync(b);
             await _repo.SalvarAlteracoesAsync();

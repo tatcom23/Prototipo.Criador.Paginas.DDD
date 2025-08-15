@@ -1,0 +1,117 @@
+﻿@model Paginas.Application.DTOs.PaginaDTO
+
+@{ ViewData["Title"] = "Detalhes da Página";
+
+                // Organiza os tópicos filhos
+                var topicos = Model.PaginaFilhos?
+                                .Where(t => t.CdPai == Model.Codigo)
+                                .OrderBy(t => t.Ordem)
+                                .ToList() ?? new List<Paginas.Application.DTOs.PaginaDTO>(); }
+
+<h1>@ViewData["Title"]</h1>
+
+<div class="card">
+    <div class="card-body">
+        <h4 class="card-title">@Model.Titulo</h4>
+
+        <dl class="row">
+            <dt class="col-sm-3">Conteúdo</dt>
+            <dd class="col-sm-9">@Html.Raw(Model.Conteudo)</dd>
+
+            <dt class="col-sm-3">URL Amigável</dt>
+            <dd class="col-sm-9">@Model.Url</dd>
+
+            <dt class="col-sm-3">Banner</dt>
+            <dd class="col-sm-9">@Model.Banner</dd>
+
+            <dt class="col-sm-3">Status</dt>
+            <dd class="col-sm-9">@((Model.Status) ? "Ativo" : "Inativo")</dd>
+
+            <dt class="col-sm-3">Criada em</dt>
+            <dd class="col-sm-9">@Model.Criacao.ToString("dd/MM/yyyy HH:mm")</dd>
+
+            @if (Model.Atualizacao.HasValue)
+            {
+<dt class="col-sm-3">Atualizada em</dt>
+                <dd class="col-sm-9">@Model.Atualizacao.Value.ToString("dd/MM/yyyy HH:mm")</dd>            }
+        </dl>
+    </div>
+</div>
+
+<h4 class="mt-4">Botões</h4>
+@if (Model.Botoes != null && Model.Botoes.Any())
+{
+<table class="table table-bordered">
+    <thead class="table-light">
+        <tr>
+            <th>Nome</th>
+            <th>Link</th>
+            <th>Linha</th>
+            <th>Coluna</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var botao in Model.Botoes)
+        {
+<tr>
+    <td>@botao.Nome</td>
+    <td><a href="@botao.Link" target="_blank">@botao.Link</a></td>
+    <td>@botao.Linha</td>
+    <td>@botao.Coluna</td>
+</tr>}
+    </tbody>
+</table> }
+            else
+            {
+<p class="text-muted">Essa página não possui botões cadastrados.</p>}
+
+<h4 class="mt-5">Tópicos Vinculados</h4>
+@if (topicos.Any())
+{
+<table class="table table-striped">
+    <thead class="table-light">
+        <tr>
+            <th>Ordem</th>
+            <th>Título</th>
+            <th>Conteúdo</th>
+            <th>URL</th>
+            <th>Banner</th>
+            <th>Botões</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var t in topicos)
+        {
+<tr>
+    <td>@t.Ordem</td>
+    <td>@t.Titulo</td>
+    <td>@Html.Raw(t.Conteudo)</td>
+    <td>@t.Url</td>
+    <td>@t.Banner</td>
+    <td>
+        @if (t.Botoes != null && t.Botoes.Any())
+        {
+<ul class="mb-0 ps-3">
+    @foreach (var b in t.Botoes)
+    {
+<li>
+    <strong>@b.Nome</strong> -
+    <a href="@b.Link" target="_blank">@b.Link</a>
+    (L: @b.Linha, C: @b.Coluna)
+</li>}
+</ul> }
+                    else
+                    {
+<span class="text-muted"><em>Sem botões</em></span>}
+    </td>
+</tr>}
+    </tbody>
+</table> }
+            else
+            {
+<p class="text-muted">Essa página não possui tópicos vinculados.</p>}
+
+<div class="mt-3">
+    <a asp-action="Exibir" asp-route-url="@Model.Url" class="btn btn-success" target="_blank">Exibir</a>
+    <a asp-action="Listar" class="btn btn-secondary">Voltar para Lista</a>
+</div>

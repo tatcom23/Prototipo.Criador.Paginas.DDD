@@ -1,4 +1,4 @@
-﻿using Paginas.Domain.Entities;
+﻿// Application -> Services -> Interfaces -> IPaginaService.cs
 using Paginas.Application.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,15 +7,20 @@ namespace Paginas.Application.Services.Interfaces
 {
     public interface IPaginaService
     {
-        Task<List<Pagina>> ListarAsync();
-        Task<Pagina> BuscarPorIdAsync(int id);
+        // Para consumo pela camada MVC/Views
+        Task<List<PaginaDTO>> ListarAsync();
+        Task<PaginaDTO> BuscarPorIdAsync(int id);
+        Task<List<PaginaDTO>> ListarFilhosAsync(int cdPai);
 
-        // Atualizado para aceitar o webRootPath, como no service
+        // Operações de escrita (entrada em DTO)
         Task CriarAsync(PaginaDTO model, string webRootPath);
         Task AtualizarAsync(int id, PaginaDTO model, string webRootPath);
-
         Task ExcluirAsync(int id);
+
+        // Criar um filho passando o id do pai (opcional)
         Task CriarComPaiAsync(PaginaDTO model, int cdPai);
-        Task AtualizarOrdemAsync(Pagina a, Pagina b);
+
+        // Atualizar ordem entre duas páginas por id (não expõe entidades)
+        Task AtualizarOrdemAsync(int idA, int idB);
     }
 }

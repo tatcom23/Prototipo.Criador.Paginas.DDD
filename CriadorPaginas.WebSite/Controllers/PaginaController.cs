@@ -45,7 +45,6 @@ namespace Paginas.Web.Controllers
                 model.Banner = "/imagens/" + nomeBanner;
             }
 
-            // Passa o webRootPath conforme a assinatura atual do serviço
             await _paginaService.CriarAsync(model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página criada com sucesso!";
@@ -55,8 +54,27 @@ namespace Paginas.Web.Controllers
         [HttpGet("Listar")]
         public async Task<IActionResult> Listar()
         {
-            var paginas = await _paginaService.ListarAsync();
-            return View(paginas);
+            var paginas = await _paginaService.ListarAsync(); // List<PaginaDTO>
+
+            // Organiza hierarquia de páginas principais e filhos
+            var paginasPrincipais = paginas
+                .Where(p => p.CdPai == null)
+                .OrderBy(p => p.Ordem)
+                .ToList();
+
+            foreach (var pagina in paginasPrincipais)
+            {
+                var filhos = paginas
+                    .Where(f => f.CdPai == pagina.Codigo)
+                    .OrderBy(f => f.Ordem)
+                    .ToList();
+
+                // segura mesmo se PaginaFilhos for só-get com lista inicializada
+                pagina.PaginaFilhos.Clear();
+                pagina.PaginaFilhos.AddRange(filhos);
+            }
+
+            return View(paginasPrincipais); // View recebe List<PaginaDTO>
         }
 
         [HttpGet("Detalhes/{id}")]
@@ -76,24 +94,11 @@ namespace Paginas.Web.Controllers
             if (pagina == null)
                 return NotFound();
 
-            var model = new PaginaDTO
-            {
-                Codigo = pagina.Codigo,
-                Titulo = pagina.Titulo,
-                Conteudo = pagina.Conteudo,
-                Url = pagina.Url,
-                Banner = pagina.Banner,
-                CdPai = pagina.CdPai,
-                Botoes = pagina.Botoes?.Select(b => new BotaoDTO
-                {
-                    Nome = b.Nome,
-                    Link = b.Link,
-                    Linha = b.Linha,
-                    Coluna = b.Coluna
-                }).ToList() ?? new List<BotaoDTO>()
-            };
+            // garante listas não nulas para a View
+            pagina.Botoes ??= new List<BotaoDTO>();
+            pagina.PaginaFilhos ??= new List<PaginaDTO>();
 
-            return View(model);
+            return View(pagina);
         }
 
         [HttpPost("Editar/{id}")]
@@ -119,7 +124,6 @@ namespace Paginas.Web.Controllers
                 model.Banner = paginaExistente.Banner;
             }
 
-            // Passa o webRootPath para atualizar
             await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página atualizada com sucesso!";
@@ -149,24 +153,30 @@ namespace Paginas.Web.Controllers
         [HttpGet("exibir/{url}", Name = "Pagina_Exibir")]
         public async Task<IActionResult> Exibir(string url)
         {
-            var pagina = (await _paginaService.ListarAsync())
-                .FirstOrDefault(p => p.Url == url && p.Tipo == TipoPagina.Principal);
+            var paginas = await _paginaService.ListarAsync();
+            var pagina = paginas
+                .FirstOrDefault(p => p.Url == url && p.Tipo == (int)TipoPagina.Principal);
 
             if (pagina == null)
                 return NotFound();
 
-            var filhos = (await _paginaService.ListarAsync())
+            var filhos = paginas
                 .Where(p => p.CdPai == pagina.Codigo)
+                .OrderBy(p => p.Ordem)
                 .ToList();
 
             pagina.PaginaFilhos.Clear();
-            foreach (var filho in filhos)
-            {
-                pagina.PaginaFilhos.Add(filho);
-            }
-
+            pagina.PaginaFilhos.AddRange(filhos);
 
             return View("Exibir", pagina);
+        }
+
+        // POST helper para atualizar ordem (chamada pela View Listar via form)
+        [HttpPost("AtualizarOrdem")]
+        public async Task<IActionResult> AtualizarOrdem(int idA, int idB)
+        {
+            await _paginaService.AtualizarOrdemAsync(idA, idB);
+            return RedirectToAction("Listar");
         }
     }
 }
