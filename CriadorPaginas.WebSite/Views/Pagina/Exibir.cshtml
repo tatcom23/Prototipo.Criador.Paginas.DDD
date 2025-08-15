@@ -1,0 +1,88 @@
+﻿@model Paginas.Application.DTOs.PaginaDTO
+
+@{ ViewData["Title"] = Model.Titulo;
+
+                var topicos = Model.PaginaFilhos?.OrderBy(t => t.Ordem).ToList() ?? new List<Paginas.Application.DTOs.PaginaDTO>();
+                var botoesAgrupados = Model.Botoes?
+                    .GroupBy(b => b.Linha)
+                    .OrderBy(g => g.Key)
+                    .ToList(); }
+
+<div class="container py-5">
+
+    @* Banner da Página *@
+    @if (!string.IsNullOrEmpty(Model.Banner))
+    {
+<img src="@Model.Banner" alt="Banner da página" class="img-fluid w-100 rounded mb-4 shadow-sm" />}
+
+    <h1 class="text-center mb-4">@Model.Titulo</h1>
+
+    @* Conteúdo da Página *@
+    @if (!string.IsNullOrWhiteSpace(Model.Conteudo))
+    {
+<div class="mb-5 content-wrapper">
+    @Html.Raw(Model.Conteudo)
+</div> } @* Botões principais *@
+    @if (botoesAgrupados?.Any() == true)
+    {
+        foreach (var linha in botoesAgrupados)
+        {
+            var botoes = linha.OrderBy(b => b.Coluna).ToList();
+            var classeGrupo = botoes.Count == 1 ? "btn-single" : "btn-flex";
+
+<div class="btn-group-responsive mb-4">
+    @foreach (var botao in botoes)
+    {
+<a href="@botao.Link" target="_blank" class="btn btn-primary @classeGrupo">
+    @botao.Nome
+</a>}
+</div> }
+            } @* Tópicos vinculados *@
+    @if (topicos.Any())
+    {
+<hr class="my-5" />
+                @foreach (var t in topicos)
+                {
+                    var anchorId = !string.IsNullOrWhiteSpace(t.Url)
+                        ? t.Url.ToLower().Replace(" ", "-")
+                        : $"topico-{t.Codigo}";
+
+                    var botoesTopicoAgrupados = t.Botoes?
+                        .GroupBy(b => b.Linha)
+                        .OrderBy(g => g.Key)
+                        .ToList();
+
+<div id="@anchorId" class="mb-5 p-3 border rounded shadow-sm">
+
+    <h4 class="w-100 text-start mb-3 px-3 py-2 text-white rounded" style="background-color:#028dcf;">
+        @t.Titulo
+    </h4>
+
+    @* Banner do tópico *@
+    @if (!string.IsNullOrWhiteSpace(t.Banner))
+    {
+<div class="mb-3">
+    <img src="@t.Banner" class="img-fluid rounded shadow-sm" alt="Banner do tópico" />
+</div> } @* Conteúdo do tópico *@
+    @if (!string.IsNullOrWhiteSpace(t.Conteudo))
+    {
+<div class="mb-3 content-wrapper">
+    @Html.Raw(t.Conteudo)
+</div> } @* Botões do tópico *@
+    @if (botoesTopicoAgrupados?.Any() == true)
+    {
+        foreach (var linha in botoesTopicoAgrupados)
+        {
+            var botoes = linha.OrderBy(b => b.Coluna).ToList();
+            var classeGrupo = botoes.Count == 1 ? "btn-single" : "btn-flex";
+
+<div class="btn-group-responsive mb-3">
+    @foreach (var botao in botoes)
+    {
+<a href="@botao.Link" target="_blank" class="btn btn-primary @classeGrupo">
+    @botao.Nome
+</a>                            }
+</div>}
+                    }
+</div>}}
+</div>
