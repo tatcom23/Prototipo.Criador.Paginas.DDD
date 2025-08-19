@@ -6,24 +6,25 @@
 
 <form asp-action="Index" method="post" enctype="multipart/form-data">
     <div class="mb-3">
-        <label asp-for="Titulo"></label>
+        <label asp-for="Titulo" class="form-label"></label>
         <input asp-for="Titulo" class="form-control" />
         <span asp-validation-for="Titulo" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="Conteudo"></label>
-        <textarea id="conteudoEditor" name="Conteudo" class="form-control">@Model.Conteudo</textarea>
+        <label asp-for="Conteudo" class="form-label"></label>
+        <!-- Conteúdo principal com editor -->
+        <textarea id="conteudoEditor" name="Conteudo" class="form-control richtext">@Model.Conteudo</textarea>
         <span asp-validation-for="Conteudo" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="Url"></label>
+        <label asp-for="Url" class="form-label"></label>
         <input asp-for="Url" class="form-control" />
     </div>
 
     <div class="mb-3">
-        <label>Banner da Página (imagem)</label>
+        <label class="form-label">Banner da Página (imagem)</label>
         <input type="file" name="BannerFile" class="form-control" />
     </div>
 
@@ -32,16 +33,16 @@
         @for (int i = 0; i < Model.Botoes.Count; i++)
         {
 <div class="botao-bloco border p-3 mb-3 rounded">
-    <label>Nome</label>
+    <label class="form-label">Nome</label>
     <input asp-for="Botoes[i].Nome" class="form-control" />
 
-    <label>Link</label>
+    <label class="form-label">Link</label>
     <input name="Botoes[@i].Link" value="@Model.Botoes[i].Link" class="form-control" />
 
-    <label>Linha</label>
+    <label class="form-label">Linha</label>
     <input asp-for="Botoes[i].Linha" class="form-control" />
 
-    <label>Coluna</label>
+    <label class="form-label">Coluna</label>
     <input asp-for="Botoes[i].Coluna" class="form-control" />
 </div>}
     </div>
@@ -53,15 +54,18 @@
         {
             var topico = Model.PaginaFilhos[i];
 <div class="topico-bloco border rounded p-3 mb-3">
-    <h5>Tópico @(i+1)</h5>
+    <h5>Tópico @(i + 1)</h5>
 
-    <label>Título</label>
+    <label class="form-label">Título</label>
     <input name="PaginaFilhos[@i].Titulo" class="form-control" value="@topico.Titulo" />
 
-    <label>Conteúdo</label>
-    <textarea name="PaginaFilhos[@i].Conteudo" class="form-control">@topico.Conteudo</textarea>
+    <label class="form-label">Conteúdo</label>
+    <!-- Editor também nos tópicos já existentes -->
+    <textarea id="topicoConteudo_@i"
+              name="PaginaFilhos[@i].Conteudo"
+              class="form-control richtext">@topico.Conteudo</textarea>
 
-    <label>URL</label>
+    <label class="form-label">URL</label>
     <input name="PaginaFilhos[@i].Url" class="form-control" value="@topico.Url" />
 
     <h6 class="mt-3">Botões do Tópico</h6>
@@ -70,16 +74,16 @@
         {
             var botao = topico.Botoes[j];
 <div class="mb-3 border p-2 rounded">
-    <label>Nome</label>
+    <label class="form-label">Nome</label>
     <input name="PaginaFilhos[@i].Botoes[@j].Nome" class="form-control" value="@botao.Nome" />
 
-    <label>Link</label>
+    <label class="form-label">Link</label>
     <input name="PaginaFilhos[@i].Botoes[@j].Link" class="form-control" value="@botao.Link" />
 
-    <label>Linha</label>
+    <label class="form-label">Linha</label>
     <input name="PaginaFilhos[@i].Botoes[@j].Linha" class="form-control" value="@botao.Linha" />
 
-    <label>Coluna</label>
+    <label class="form-label">Coluna</label>
     <input name="PaginaFilhos[@i].Botoes[@j].Coluna" class="form-control" value="@botao.Coluna" />
 </div>}
     </div>
@@ -101,37 +105,50 @@
     <script src="https://cdn.tiny.cloud/1/b5d8tmun1yevgtofzef4ptf15z357dx69j8y3eu7lik3tw17/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
 
     <script>
-        tinymce.init({
-            selector: '#conteudoEditor',
-            language: 'pt_BR',
-            height: 400,
-            plugins: [
-                'advlist autolink lists link image charmap preview anchor searchreplace',
-                'visualblocks code fullscreen insertdatetime media table help wordcount'
-            ],
-            toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter ' +
-                     'alignright alignjustify | bullist numlist outdent indent | removeformat | help',
-            content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }'
-        });
+        // Inicializa TinyMCE nos seletores informados; evita reinicializar o mesmo textarea
+        function initEditors(selector = 'textarea.richtext') {
+            tinymce.init({
+                selector: `${selector}:not([data-editor-initialized="1"])`,
+                language: 'pt_BR',
+                height: 400,
+                plugins: [
+                    'advlist autolink lists link image charmap preview anchor searchreplace',
+                    'visualblocks code fullscreen insertdatetime media table help wordcount'
+                ],
+                toolbar: 'undo redo | blocks | bold italic forecolor | alignleft aligncenter ' +
+                         'alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                content_style: 'body { font-family:Helvetica,Arial,sans-serif; font-size:14px }',
+                setup: (editor) => {
+                    editor.on('init', () => {
+                        editor.getElement().setAttribute('data-editor-initialized', '1');
+                    });
+                }
+            });
+        }
 
+        // Inicializa o editor no conteúdo principal e nos tópicos já renderizados
+        initEditors();
+
+        // ----- Botões (container principal) -----
         let botaoIndex = @Model.Botoes.Count;
         document.getElementById('add-botao').addEventListener('click', function () {
             const container = document.getElementById('botoes-container');
             const div = document.createElement('div');
             div.classList.add("botao-bloco", "border", "p-3", "mb-3", "rounded");
             div.innerHTML = `
-                <label>Nome</label>
+                <label class="form-label">Nome</label>
                 <input name="Botoes[${botaoIndex}].Nome" class="form-control" />
-                <label>Link</label>
+                <label class="form-label">Link</label>
                 <input name="Botoes[${botaoIndex}].Link" class="form-control" />
-                <label>Linha</label>
+                <label class="form-label">Linha</label>
                 <input name="Botoes[${botaoIndex}].Linha" class="form-control" />
-                <label>Coluna</label>
+                <label class="form-label">Coluna</label>
                 <input name="Botoes[${botaoIndex}].Coluna" class="form-control" />`;
             container.appendChild(div);
             botaoIndex++;
         });
 
+        // ----- Tópicos (dinâmicos) -----
         let topicoIndex = @Model.PaginaFilhos.Count;
         document.getElementById('add-topico').addEventListener('click', function () {
             const container = document.getElementById('topicos-container');
@@ -139,11 +156,11 @@
             const html = `
                 <div class="topico-bloco border rounded p-3 mb-3">
                     <h5>Tópico ${idx + 1}</h5>
-                    <label>Título</label>
+                    <label class="form-label">Título</label>
                     <input name="PaginaFilhos[${idx}].Titulo" class="form-control" />
-                    <label>Conteúdo</label>
-                    <textarea name="PaginaFilhos[${idx}].Conteudo" class="form-control"></textarea>
-                    <label>URL</label>
+                    <label class="form-label">Conteúdo</label>
+                    <textarea id="topicoConteudo_${idx}" name="PaginaFilhos[${idx}].Conteudo" class="form-control richtext"></textarea>
+                    <label class="form-label">URL</label>
                     <input name="PaginaFilhos[${idx}].Url" class="form-control" />
                     <h6 class="mt-3">Botões do Tópico</h6>
                     <div id="topico-botoes-${idx}"></div>
@@ -152,27 +169,33 @@
                     </button>
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
+
+            // Inicializa o TinyMCE somente no textarea recém-inserido
+            initEditors(`#topicoConteudo_${idx}`);
+
             topicoIndex++;
         });
 
+        // Adiciona botões dentro de um tópico específico
         function addBotaoTopico(topicoIdx) {
             const container = document.getElementById(`topico-botoes-${topicoIdx}`);
             const bIndex = container.children.length;
             const html = `
                 <div class="mb-3 border p-2 rounded">
-                    <label>Nome</label>
+                    <label class="form-label">Nome</label>
                     <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Nome" class="form-control" />
-                    <label>Link</label>
+                    <label class="form-label">Link</label>
                     <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Link" class="form-control" />
-                    <label>Linha</label>
+                    <label class="form-label">Linha</label>
                     <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Linha" class="form-control" />
-                    <label>Coluna</label>
+                    <label class="form-label">Coluna</label>
                     <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Coluna" class="form-control" />
                 </div>`;
             container.insertAdjacentHTML('beforeend', html);
         }
 
-        document.querySelector('form').addEventListener('submit', function() {
+        // Garante que o conteúdo do TinyMCE volte para os textareas antes do submit
+        document.querySelector('form').addEventListener('submit', function () {
             tinymce.triggerSave();
         });
     </script>
