@@ -35,7 +35,7 @@ namespace Paginas.Web.Controllers
         {
             if (!ModelState.IsValid)
                 return View(model);
-
+            //@todo: refatorar para selecionar o caminho da variável de ambiente appsettings
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);

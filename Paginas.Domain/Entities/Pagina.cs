@@ -53,6 +53,15 @@ namespace Paginas.Domain.Entities
             Versao++;
         }
 
+        // adiciona no agregado Pagina
+        public void DefinirBanner(string banner)
+        {
+            // aceita null/empty para limpar o banner também
+            Banner = string.IsNullOrWhiteSpace(banner) ? null : banner.Trim();
+            Atualizacao = DateTime.UtcNow;
+            Versao++;
+        }
+
         public void AtualizarOrdem(int novaOrdem)
         {
             Ordem = novaOrdem;

@@ -45,8 +45,11 @@ namespace Paginas.Application.Services
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            // se CdPai tiver valor, forçamos Topico; senão usa o tipo informado no DTO
-            var tipo = model.CdPai.HasValue ? TipoPagina.Topico : (TipoPagina)model.Tipo;
+            // Normaliza a URL para evitar espaços acidentais
+            model.Url = model.Url?.Trim();
+
+            // Se CdPai tiver valor => Topico; senão => Principal (NÃO depende do valor vindo do form)
+            var tipo = model.CdPai.HasValue ? TipoPagina.Topico : TipoPagina.Principal;
 
             var pagina = new Pagina(
                 model.Titulo,
@@ -55,6 +58,12 @@ namespace Paginas.Application.Services
                 tipo,
                 model.CdPai
             );
+
+            // Define banner se foi informado pela camada de apresentação (controller já coloca o caminho em model.Banner)
+            if (!string.IsNullOrWhiteSpace(model.Banner))
+            {
+                pagina.DefinirBanner(model.Banner);
+            }
 
             // Persistir a página para gerar PK
             await _repo.AdicionarAsync(pagina);
@@ -89,14 +98,23 @@ namespace Paginas.Application.Services
             {
                 foreach (var topico in model.PaginaFilhos)
                 {
+                    // garante url do tópico normalizada
+                    var topicoUrl = topico.Url?.Trim();
+
                     // define subpágina sempre como Topico
                     var sub = new Pagina(
                         topico.Titulo,
                         topico.Conteudo,
-                        topico.Url,
+                        topicoUrl,
                         TipoPagina.Topico,
                         pagina.Codigo
                     );
+
+                    // define banner do tópico se fornecido
+                    if (!string.IsNullOrWhiteSpace(topico.Banner))
+                    {
+                        sub.DefinirBanner(topico.Banner);
+                    }
 
                     await _repo.AdicionarAsync(sub);
                     await _repo.SalvarAlteracoesAsync();
@@ -136,9 +154,18 @@ namespace Paginas.Application.Services
             var pagina = await _repo.ObterPorIdAsync(id);
             if (pagina == null) return;
 
+            // Normaliza a URL no update também
+            model.Url = model.Url?.Trim();
+
             // Atualiza campos principais; mantém o tipo atual da entidade
             var tipo = pagina.Tipo; // manter tipo atual; se quiser permitir mudança, use (TipoPagina)model.Tipo
             pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, tipo);
+
+            // Atualiza banner se informado (preserva existente caso model.Banner seja null/empty)
+            if (!string.IsNullOrWhiteSpace(model.Banner) && model.Banner != pagina.Banner)
+            {
+                pagina.DefinirBanner(model.Banner);
+            }
 
             // Publicação/Status através de métodos do domínio
             if (model.Publicacao) pagina.Publicar(); else pagina.Despublicar();
@@ -177,10 +204,15 @@ namespace Paginas.Application.Services
             var sub = new Pagina(
                 model.Titulo,
                 model.Conteudo,
-                model.Url,
+                model.Url?.Trim(),
                 TipoPagina.Topico,
                 cdPai
             );
+
+            if (!string.IsNullOrWhiteSpace(model.Banner))
+            {
+                sub.DefinirBanner(model.Banner);
+            }
 
             await _repo.AdicionarAsync(sub);
             await _repo.SalvarAlteracoesAsync();
