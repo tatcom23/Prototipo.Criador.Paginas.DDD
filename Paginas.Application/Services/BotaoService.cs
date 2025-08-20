@@ -28,7 +28,7 @@ namespace Paginas.Application.Services
                 Link = botao.Link,
                 Linha = botao.Linha,
                 Coluna = botao.Coluna,
-                Tipo = (int)botao.Tipo, // conversão enum para int
+                Tipo = (int)botao.Tipo,
                 Status = botao.Status,
                 CdPaginaIntrodutoria = botao.CdPaginaIntrodutoria
             };
@@ -39,20 +39,21 @@ namespace Paginas.Application.Services
             var botao = await _repository.ObterPorIdAsync(dto.Codigo);
             if (botao == null) return;
 
-            // converte int para enum no método Atualizar da entidade
-            botao.Atualizar(dto.Nome, dto.Link, (TipoBotao)dto.Tipo, dto.Linha, dto.Coluna);
-
-            if (dto.Status)
-                botao.Ativar();
-            else
-                botao.Desativar();
+            // Atualiza apenas Nome e Link
+            botao.Atualizar(dto.Nome, dto.Link, botao.Tipo, botao.Linha, botao.Coluna);
 
             await _repository.AtualizarAsync(botao);
+            await _repository.SalvarAlteracoesAsync();
         }
 
         public async Task ExcluirAsync(int id)
         {
-            await _repository.RemoverAsync(id);
+            var botao = await _repository.ObterPorIdAsync(id);
+            if (botao == null) return;
+
+            await _repository.RemoverAsync(botao.Codigo);
+            await _repository.SalvarAlteracoesAsync();
         }
+
     }
 }

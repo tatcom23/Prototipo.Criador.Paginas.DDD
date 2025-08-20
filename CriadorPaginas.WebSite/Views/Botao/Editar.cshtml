@@ -19,29 +19,6 @@
         <span asp-validation-for="Link" class="text-danger"></span>
     </div>
 
-    <div class="mb-3">
-        <label asp-for="Tipo" class="form-label">Tipo do Botão</label>
-        <select asp-for="Tipo" class="form-select" asp-items="ViewBag.Tipos"></select>
-        <span asp-validation-for="Tipo" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="Linha" class="form-label"></label>
-        <input asp-for="Linha" class="form-control" type="number" min="1" />
-        <span asp-validation-for="Linha" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3">
-        <label asp-for="Coluna" class="form-label"></label>
-        <input asp-for="Coluna" class="form-control" type="number" min="1" />
-        <span asp-validation-for="Coluna" class="text-danger"></span>
-    </div>
-
-    <div class="mb-3 form-check">
-        <input asp-for="Status" class="form-check-input" type="checkbox" />
-        <label asp-for="Status" class="form-check-label">Ativo</label>
-    </div>
-
     <button type="submit" class="btn btn-primary">Salvar Alterações</button>
     <a asp-action="Detalhes" asp-controller="Pagina" asp-route-id="@Model.CdPaginaIntrodutoria" class="btn btn-secondary">Cancelar</a>
 </form>

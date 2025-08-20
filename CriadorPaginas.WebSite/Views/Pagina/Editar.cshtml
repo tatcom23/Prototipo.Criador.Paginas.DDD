@@ -1,6 +1,6 @@
 ﻿@model Paginas.Application.DTOs.PaginaDTO
-
-@{ ViewData["Title"] = "Editar Página Introdutória"; }
+@{ ViewData["Title"] = "Editar Página Introdutória";
+    var isPrincipal = Model.CdPai == null; // true = página principal, false = tópico }
 
 <h1>@ViewData["Title"]</h1>
 
@@ -24,75 +24,36 @@
         <input asp-for="Url" class="form-control" />
     </div>
 
-    <div class="mb-3">
-        <label class="form-label">Banner da Página (imagem)</label>
-        <input type="file" name="BannerFile" class="form-control" />
-        @if (!string.IsNullOrEmpty(Model.Banner))
-        {
+    @* Banner: só para página principal *@
+    @if (isPrincipal)
+    {
+<div class="mb-3">
+    <label class="form-label">Banner da Página (imagem)</label>
+    <input type="file" name="BannerFile" class="form-control" />
+    @if (!string.IsNullOrEmpty(Model.Banner))
+    {
 <img src="@Model.Banner" class="img-fluid mt-2" style="max-height: 150px;" />}
-    </div>
-
+</div> } @* Botões: somente adicionar novos, não editar existentes *@
     <h4 class="mt-4">Botões</h4>
-    <div id="botoes-container">
-        @for (int i = 0; i < Model.Botoes.Count; i++)
-        {
-<div class="botao-bloco border p-3 mb-3 rounded">
-    <label class="form-label">Nome</label>
-    <input asp-for="Botoes[i].Nome" class="form-control" />
-    <label class="form-label">Link</label>
-    <input name="Botoes[@i].Link" value="@Model.Botoes[i].Link" class="form-control" />
-    <label class="form-label">Linha</label>
-    <input asp-for="Botoes[i].Linha" class="form-control" />
-    <label class="form-label">Coluna</label>
-    <input asp-for="Botoes[i].Coluna" class="form-control" />
-</div>}
-    </div>
+    <div id="botoes-container"></div>
     <button type="button" id="add-botao" class="btn btn-secondary">Adicionar Botão</button>
 
-    <h4 class="mt-4">Tópicos</h4>
-    <div id="topicos-container">
-        @for (int i = 0; i < Model.PaginaFilhos.Count; i++)
-        {
-            var topico = Model.PaginaFilhos[i];
-<div class="topico-bloco border rounded p-3 mb-3">
-    <h5>Tópico @(i + 1)</h5>
-    <input type="hidden" name="PaginaFilhos[@i].Ordem" value="@topico.Ordem" class="topico-ordem" />
-    <label class="form-label">Título</label>
-    <input name="PaginaFilhos[@i].Titulo" class="form-control" value="@topico.Titulo" />
-    <label class="form-label">Conteúdo</label>
-    <textarea id="topicoConteudo_@i" name="PaginaFilhos[@i].Conteudo" class="form-control richtext">@topico.Conteudo</textarea>
-    <label class="form-label">URL</label>
-    <input name="PaginaFilhos[@i].Url" class="form-control" value="@topico.Url" />
-    <h6 class="mt-3">Botões do Tópico</h6>
-    <div id="topico-botoes-@i">
-        @for (int j = 0; j < topico.Botoes.Count; j++)
-        {
-            var botao = topico.Botoes[j];
-<div class="mb-3 border p-2 rounded">
-    <label class="form-label">Nome</label>
-    <input name="PaginaFilhos[@i].Botoes[@j].Nome" class="form-control" value="@botao.Nome" />
-    <label class="form-label">Link</label>
-    <input name="PaginaFilhos[@i].Botoes[@j].Link" class="form-control" value="@botao.Link" />
-    <label class="form-label">Linha</label>
-    <input name="PaginaFilhos[@i].Botoes[@j].Linha" class="form-control" value="@botao.Linha" />
-    <label class="form-label">Coluna</label>
-    <input name="PaginaFilhos[@i].Botoes[@j].Coluna" class="form-control" value="@botao.Coluna" />
-</div>}
-    </div>
-    <button type="button" onclick="addBotaoTopico(@i)" class="btn btn-sm btn-outline-primary mt-2">Adicionar Botão ao Tópico</button>
-</div>}
-    </div>
-    <button type="button" id="add-topico" class="btn btn-secondary">Adicionar Tópico</button>
+    @* Seção de Tópicos: só aparece para página principal *@
+    @if (isPrincipal)
+    {
+<h4 class="mt-4">Tópicos</h4>
+                <div id="topicos-container"></div>
+                                <button type="button" id="add-topico" class="btn btn-secondary">Adicionar Tópico</button>}
 
     <div class="mt-3">
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
     </div>
 </form>
+    }
 
 @section Scripts {
     @await Html.PartialAsync("_ValidationScriptsPartial")
     <script src="https://cdn.tiny.cloud/1/b5d8tmun1yevgtofzef4ptf15z357dx69j8y3eu7lik3tw17/tinymce/6/tinymce.min.js" referrerpolicy="origin"></script>
-
     <script>
         function initEditors(selector = 'textarea.richtext') {
             tinymce.init({
@@ -109,81 +70,82 @@
                 }
             });
         }
-
         initEditors();
 
         // Botões principais
-        let botaoIndex = @Model.Botoes.Count;
+        let botaoIndex = 0;
         document.getElementById('add-botao').addEventListener('click', function () {
             const container = document.getElementById('botoes-container');
             const div = document.createElement('div');
             div.classList.add("botao-bloco", "border", "p-3", "mb-3", "rounded");
             div.innerHTML = `
-                <label class="form-label">Nome</label>
-                <input name="Botoes[${botaoIndex}].Nome" class="form-control" />
-                <label class="form-label">Link</label>
-                <input name="Botoes[${botaoIndex}].Link" class="form-control" />
-                <label class="form-label">Linha</label>
-                <input name="Botoes[${botaoIndex}].Linha" class="form-control" />
-                <label class="form-label">Coluna</label>
-                <input name="Botoes[${botaoIndex}].Coluna" class="form-control" />`;
+                    <label class="form-label">Nome</label>
+                    <input name="Botoes[${botaoIndex}].Nome" class="form-control" />
+                    <label class="form-label">Link</label>
+                    <input name="Botoes[${botaoIndex}].Link" class="form-control" />
+                    <label class="form-label">Linha</label>
+                    <input name="Botoes[${botaoIndex}].Linha" class="form-control" />
+                    <label class="form-label">Coluna</label>
+                    <input name="Botoes[${botaoIndex}].Coluna" class="form-control" />`;
             container.appendChild(div);
             botaoIndex++;
         });
 
-        // Tópicos
-        let topicoIndex = @Model.PaginaFilhos.Count;
-        document.getElementById('add-topico').addEventListener('click', function () {
-            const container = document.getElementById('topicos-container');
-            const idx = topicoIndex;
-            const html = `
-                <div class="topico-bloco border rounded p-3 mb-3">
-                    <h5>Novo Tópico</h5>
-                    <input type="hidden" name="PaginaFilhos[${idx}].Ordem" value="${idx}" class="topico-ordem" />
-                    <label class="form-label">Título</label>
-                    <input name="PaginaFilhos[${idx}].Titulo" class="form-control" />
-                    <label class="form-label">Conteúdo</label>
-                    <textarea id="topicoConteudo_${idx}" name="PaginaFilhos[${idx}].Conteudo" class="form-control richtext"></textarea>
-                    <label class="form-label">URL</label>
-                    <input name="PaginaFilhos[${idx}].Url" class="form-control" />
-                    <h6 class="mt-3">Botões do Tópico</h6>
-                    <div id="topico-botoes-${idx}"></div>
-                    <button type="button" onclick="addBotaoTopico(${idx})" class="btn btn-sm btn-outline-primary mt-2">Adicionar Botão ao Tópico</button>
-                </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-            initEditors(`#topicoConteudo_${idx}`);
-            topicoIndex++;
-        });
+        // Tópicos (somente para página principal)
+        const addTopicoBtn = document.getElementById('add-topico');
+        if (addTopicoBtn) {
+            let topicoIndex = 0;
+            addTopicoBtn.addEventListener('click', function () {
+                const container = document.getElementById('topicos-container');
+                const idx = topicoIndex;
+                const html = `
+                        <div class="topico-bloco border rounded p-3 mb-3">
+                            <h5>Novo Tópico</h5>
+                            <input type="hidden" name="PaginaFilhos[${idx}].Ordem" value="${idx + 1}" class="topico-ordem" />
+                            <label class="form-label">Título</label>
+                            <input name="PaginaFilhos[${idx}].Titulo" class="form-control" />
+                            <label class="form-label">Conteúdo</label>
+                            <textarea id="topicoConteudo_${idx}" name="PaginaFilhos[${idx}].Conteudo" class="form-control richtext"></textarea>
+                            <label class="form-label">URL</label>
+                            <input name="PaginaFilhos[${idx}].Url" class="form-control" />
+                            <h6 class="mt-3">Botões do Tópico</h6>
+                            <div id="topico-botoes-${idx}"></div>
+                            <button type="button" onclick="addBotaoTopico(${idx})" class="btn btn-sm btn-outline-primary mt-2">Adicionar Botão ao Tópico</button>
+                        </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+                initEditors(`#topicoConteudo_${idx}`);
+                topicoIndex++;
+            });
 
-        function addBotaoTopico(topicoIdx) {
-            const container = document.getElementById(`topico-botoes-${topicoIdx}`);
-            const bIndex = container.children.length;
-            const html = `
-                <div class="mb-3 border p-2 rounded">
-                    <label>Nome</label>
-                    <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Nome" class="form-control" />
-                    <label>Link</label>
-                    <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Link" class="form-control" />
-                    <label>Linha</label>
-                    <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Linha" class="form-control" />
-                    <label>Coluna</label>
-                    <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Coluna" class="form-control" />
-                </div>`;
-            container.insertAdjacentHTML('beforeend', html);
-        }
+            window.addBotaoTopico = function (topicoIdx) {
+                const container = document.getElementById(`topico-botoes-${topicoIdx}`);
+                const bIndex = container.children.length;
+                const html = `
+                        <div class="mb-3 border p-2 rounded">
+                            <label>Nome</label>
+                            <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Nome" class="form-control" />
+                            <label>Link</label>
+                            <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Link" class="form-control" />
+                            <label>Linha</label>
+                            <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Linha" class="form-control" />
+                            <label>Coluna</label>
+                            <input name="PaginaFilhos[${topicoIdx}].Botoes[${bIndex}].Coluna" class="form-control" />
+                        </div>`;
+                container.insertAdjacentHTML('beforeend', html);
+            };
 
-        // Atualiza ordem antes do submit
-        function atualizarOrdemTopicos() {
-            const topicos = document.querySelectorAll('#topicos-container .topico-bloco');
-            topicos.forEach((topico, index) => {
-                const inputOrdem = topico.querySelector('input.topico-ordem');
-                if(inputOrdem) inputOrdem.value = index + 1;
+            document.querySelector('form').addEventListener('submit', function () {
+                const topicos = document.querySelectorAll('#topicos-container .topico-bloco');
+                topicos.forEach((topico, index) => {
+                    const inputOrdem = topico.querySelector('input.topico-ordem');
+                    if (inputOrdem) inputOrdem.value = index + 1;
+                });
+                tinymce.triggerSave();
+            });
+        } else {
+            document.querySelector('form').addEventListener('submit', function () {
+                tinymce.triggerSave();
             });
         }
-
-        document.querySelector('form').addEventListener('submit', function () {
-            atualizarOrdemTopicos();
-            tinymce.triggerSave();
-        });
     </script>
 }
