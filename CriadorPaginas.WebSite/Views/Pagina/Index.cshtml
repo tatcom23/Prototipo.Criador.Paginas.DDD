@@ -12,22 +12,22 @@
     </div>
 
     <div class="mb-3">
-        <label asp-for="Conteudo" class="form-label"></label>
+        <label asp-for="Url" class="form-label">Url de acesso</label>
+        <input asp-for="Url" class="form-control" />
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="Conteudo" class="form-label">Descrição</label>
         <textarea id="conteudoEditor" name="Conteudo" class="form-control richtext">@Model.Conteudo</textarea>
         <span asp-validation-for="Conteudo" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="Url" class="form-label"></label>
-        <input asp-for="Url" class="form-control" />
-    </div>
-
-    <div class="mb-3">
-        <label class="form-label">Banner da Página (imagem)</label>
+        <label class="form-label">Banner principal</label>
         <input type="file" name="BannerFile" class="form-control" />
     </div>
 
-    <h4 class="mt-4">Botões</h4>
+    <h4 class="mt-4">Botões de navegação</h4>
     <div id="botoes-container">
         @for (int i = 0; i < Model.Botoes.Count; i++)
         {
@@ -42,9 +42,9 @@
     <input asp-for="Botoes[i].Coluna" class="form-control" />
 </div>}
     </div>
-    <button type="button" id="add-botao" class="btn btn-secondary">Adicionar Botão</button>
+    <button type="button" id="add-botao" class="btn btn-secondary">Adicionar botão</button>
 
-    <h4 class="mt-4">Tópicos</h4>
+    <h4 class="mt-4">Tópicos de descrição</h4>
     <div id="topicos-container">
         @for (int i = 0; i < Model.PaginaFilhos.Count; i++)
         {
@@ -77,7 +77,7 @@
     <button type="button" onclick="addBotaoTopico(@i)" class="btn btn-sm btn-outline-primary mt-2">Adicionar Botão ao Tópico</button>
 </div>}
     </div>
-    <button type="button" id="add-topico" class="btn btn-secondary">Adicionar Tópico</button>
+    <button type="button" id="add-topico" class="btn btn-secondary">Adicionar tópico</button>
 
     <div class="mt-3">
         <button type="submit" class="btn btn-primary">Salvar</button>

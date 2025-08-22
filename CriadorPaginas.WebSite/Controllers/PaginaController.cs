@@ -184,13 +184,15 @@ namespace Paginas.Web.Controllers
             return View("Exibir", pagina);
         }
 
-        // POST helper para atualizar ordem (chamada pela View via form)
+        // POST helper para atualizar ordem
         [HttpPost("AtualizarOrdem")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AtualizarOrdem(int idA, int idB)
+        public async Task<IActionResult> AtualizarOrdem(int idA, int idB, int paginaId)
         {
             await _paginaService.AtualizarOrdemAsync(idA, idB);
-            return RedirectToAction("Listar");
+
+            // Redireciona para a própria página usando o id passado
+            return RedirectToAction("Gerenciar", new { id = paginaId });
         }
 
         // NOVA ACTION: tela completa (igual ao expandido atual) para gerenciar uma única página
