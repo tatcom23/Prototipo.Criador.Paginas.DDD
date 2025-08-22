@@ -1,5 +1,4 @@
-﻿// Application -> Services -> Interfaces -> IPaginaService.cs
-using Paginas.Application.DTOs;
+﻿using Paginas.Application.DTOs;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -11,6 +10,9 @@ namespace Paginas.Application.Services.Interfaces
         Task<List<PaginaDTO>> ListarAsync();
         Task<PaginaDTO> BuscarPorIdAsync(int id);
         Task<List<PaginaDTO>> ListarFilhosAsync(int cdPai);
+
+        // Paginação: retorna items e total count (somente raiz por padrão)
+        Task<(List<PaginaDTO> Items, int TotalCount)> ListarPaginadoAsync(int page, int pageSize);
 
         // Operações de escrita (entrada em DTO)
         Task CriarAsync(PaginaDTO model, string webRootPath);

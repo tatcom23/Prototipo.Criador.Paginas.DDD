@@ -35,6 +35,34 @@ namespace Paginas.Infrastructure.Repositories
                 .FirstOrDefaultAsync(p => p.Codigo == id);
         }
 
+        // NOVO: paginação feita no banco (offset / limit)
+        public async Task<(List<Pagina> Items, int TotalCount)> ObterPaginadoAsync(int page, int pageSize, bool apenasRaiz = true)
+        {
+            if (page < 1) page = 1;
+            if (pageSize <= 0) pageSize = 10;
+
+            IQueryable<Pagina> query = _context.Paginas.AsQueryable();
+
+            if (apenasRaiz)
+            {
+                query = query.Where(p => p.CdPai == null);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var queryPaged = query
+                .OrderBy(p => p.Ordem)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Include(p => p.Botoes)
+                .Include(p => p.PaginaFilhos)
+                    .ThenInclude(t => t.Botoes);
+
+            var items = await queryPaged.ToListAsync();
+
+            return (items, totalCount);
+        }
+
         public async Task AdicionarAsync(Pagina pagina)
         {
             await _context.Paginas.AddAsync(pagina);

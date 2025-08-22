@@ -13,5 +13,8 @@ namespace Paginas.Domain.Repositories.Interfaces
         Task AtualizarAsync(Pagina pagina);
         Task RemoverAsync(Pagina pagina);
         Task SalvarAlteracoesAsync();
+
+        // Paginação no banco: retorna itens e o total (count)
+        Task<(List<Pagina> Items, int TotalCount)> ObterPaginadoAsync(int page, int pageSize, bool apenasRaiz = true);
     }
 }

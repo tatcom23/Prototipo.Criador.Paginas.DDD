@@ -20,8 +20,8 @@ namespace Paginas.Web.Controllers
 
         public PaginaController(IPaginaService paginaService, IWebHostEnvironment env)
         {
-            _paginaService = paginaService;
-            _env = env;
+            _paginaService = paginaService ?? throw new ArgumentNullException(nameof(paginaService));
+            _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
         [HttpGet("Index")]
@@ -31,11 +31,13 @@ namespace Paginas.Web.Controllers
         }
 
         [HttpPost("Index")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index([FromForm] PaginaDTO model, IFormFile BannerFile)
         {
             if (!ModelState.IsValid)
                 return View(model);
-            //@todo: refatorar para selecionar o caminho da variável de ambiente appsettings
+
+            // @todo: refatorar para selecionar o caminho da variável de ambiente appsettings
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
@@ -51,30 +53,38 @@ namespace Paginas.Web.Controllers
             return RedirectToAction("Listar");
         }
 
+        // LISTAR com paginação (page = 1-based) e pageSize (limit)
+        // Ex.: GET /Pagina/Listar?page=1&pageSize=10
         [HttpGet("Listar")]
-        public async Task<IActionResult> Listar()
+        public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var paginas = await _paginaService.ListarAsync(); // List<PaginaDTO>
+            if (page < 1) page = 1;
+            if (pageSize <= 0) pageSize = 10;
 
-            // Organiza hierarquia de páginas principais e filhos
-            var paginasPrincipais = paginas
-                .Where(p => p.CdPai == null)
-                .OrderBy(p => p.Ordem)
-                .ToList();
+            var (itensDto, totalCount) = await _paginaService.ListarPaginadoAsync(page, pageSize);
 
-            foreach (var pagina in paginasPrincipais)
+            // garante listas não nulas
+            if (itensDto != null)
             {
-                var filhos = paginas
-                    .Where(f => f.CdPai == pagina.Codigo)
-                    .OrderBy(f => f.Ordem)
-                    .ToList();
-
-                // segura mesmo se PaginaFilhos for só-get com lista inicializada
-                pagina.PaginaFilhos.Clear();
-                pagina.PaginaFilhos.AddRange(filhos);
+                foreach (var p in itensDto)
+                {
+                    p.PaginaFilhos ??= new List<PaginaDTO>();
+                    p.Botoes ??= new List<BotaoDTO>();
+                }
+            }
+            else
+            {
+                itensDto = new List<PaginaDTO>();
             }
 
-            return View(paginasPrincipais); // View recebe List<PaginaDTO>
+            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalCount = totalCount;
+            ViewBag.TotalPages = totalPages;
+
+            return View("Listar", itensDto); // View: Listar.cshtml (model List<PaginaDTO>)
         }
 
         [HttpGet("Detalhes/{id}")]
@@ -84,7 +94,7 @@ namespace Paginas.Web.Controllers
             if (pagina == null)
                 return NotFound();
 
-            return View(pagina);
+            return View("Detalhes", pagina);
         }
 
         [HttpGet("Editar/{id}")]
@@ -98,14 +108,15 @@ namespace Paginas.Web.Controllers
             pagina.Botoes ??= new List<BotaoDTO>();
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
 
-            return View(pagina);
+            return View("Editar", pagina);
         }
 
         [HttpPost("Editar/{id}")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Editar(int id, [FromForm] PaginaDTO model, IFormFile BannerFile)
         {
             if (!ModelState.IsValid)
-                return View(model);
+                return View("Editar", model);
 
             var paginaExistente = await _paginaService.BuscarPorIdAsync(id);
             if (paginaExistente == null)
@@ -127,7 +138,7 @@ namespace Paginas.Web.Controllers
             await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página atualizada com sucesso!";
-            return RedirectToAction("Listar");
+            return RedirectToAction("Listar", new { page = 1, pageSize = 10 });
         }
 
         [HttpGet("Excluir/{id}")]
@@ -137,11 +148,12 @@ namespace Paginas.Web.Controllers
             if (pagina == null)
                 return NotFound();
 
-            return View(pagina);
+            return View("Excluir", pagina);
         }
 
         [HttpPost("Excluir/{id}")]
         [ActionName("Excluir")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarExclusao(int id)
         {
             await _paginaService.ExcluirAsync(id);
@@ -165,18 +177,39 @@ namespace Paginas.Web.Controllers
                 .OrderBy(p => p.Ordem)
                 .ToList();
 
+            pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.PaginaFilhos.Clear();
             pagina.PaginaFilhos.AddRange(filhos);
 
             return View("Exibir", pagina);
         }
 
-        // POST helper para atualizar ordem (chamada pela View Listar via form)
+        // POST helper para atualizar ordem (chamada pela View via form)
         [HttpPost("AtualizarOrdem")]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> AtualizarOrdem(int idA, int idB)
         {
             await _paginaService.AtualizarOrdemAsync(idA, idB);
             return RedirectToAction("Listar");
+        }
+
+        // NOVA ACTION: tela completa (igual ao expandido atual) para gerenciar uma única página
+        [HttpGet("Gerenciar/{id}")]
+        public async Task<IActionResult> Gerenciar(int id)
+        {
+            var pagina = await _paginaService.BuscarPorIdAsync(id);
+            if (pagina == null)
+                return NotFound();
+
+            // garante listas não nulas
+            pagina.PaginaFilhos ??= new List<PaginaDTO>();
+            pagina.Botoes ??= new List<BotaoDTO>();
+
+            // se desejar garantir que filhos venham do repo em ordem, pode descomentar:
+            // var filhos = await _paginaService.ListarFilhosAsync(pagina.Codigo);
+            // pagina.PaginaFilhos.Clear(); pagina.PaginaFilhos.AddRange(filhos);
+
+            return View("Gerenciar", pagina); // Views/Pagina/Gerenciar.cshtml
         }
     }
 }

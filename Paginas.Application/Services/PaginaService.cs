@@ -26,6 +26,13 @@ namespace Paginas.Application.Services
             return entidades.Select(e => e.ToDTO()).ToList();
         }
 
+        public async Task<(List<PaginaDTO> Items, int TotalCount)> ListarPaginadoAsync(int page, int pageSize)
+        {
+            var (items, total) = await _repo.ObterPaginadoAsync(page, pageSize, apenasRaiz: true);
+            var dtos = items.Select(e => e.ToDTO()).ToList();
+            return (dtos, total);
+        }
+
         public async Task<List<PaginaDTO>> ListarFilhosAsync(int cdPai)
         {
             var filhos = await _repo.ListarFilhosAsync(cdPai);
@@ -50,7 +57,7 @@ namespace Paginas.Application.Services
             if (!string.IsNullOrWhiteSpace(model.Banner))
                 pagina.DefinirBanner(model.Banner);
 
-            // **Adicionar botões da página principal e tópicos**
+            // Adicionar botões da página principal e tópicos
             if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
@@ -112,7 +119,7 @@ namespace Paginas.Application.Services
             if (model.Publicacao) pagina.Publicar(); else pagina.Despublicar();
             if (model.Status) pagina.Ativar(); else pagina.Desativar();
 
-            // **NOVO:** só adiciona botões se for tópico, não altera botões existentes da página principal
+            // só adiciona botões se for tópico, não altera botões existentes da página principal
             if (tipo == TipoPagina.Topico && model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)

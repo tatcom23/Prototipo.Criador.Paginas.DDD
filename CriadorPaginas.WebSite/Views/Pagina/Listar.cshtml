@@ -1,113 +1,100 @@
 ﻿@model List<Paginas.Application.DTOs.PaginaDTO>
+@{ ViewData["Title"] = "Lista de Páginas";
 
-@{ ViewData["Title"] = "Lista de Páginas"; }
+    int page = ViewBag.Page ?? 1;
+    int pageSize = ViewBag.PageSize ?? 10;
+    int totalCount = ViewBag.TotalCount ?? (Model?.Count ?? 0);
+    int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-<h1>Lista de Páginas</h1>
+    string BuildPageUrl(int p) => Url.Action("Listar", "Pagina", new { page = p, pageSize = pageSize })!; }
 
-<a asp-action="Index" class="btn btn-primary mb-3">Nova Página</a>
+@functions{ private static string StripHtml(string input)
+    {
+        if (string.IsNullOrWhiteSpace(input)) return string.Empty;
+        return System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty));
+    }
+
+    private static string Truncate(string input, int max = 220)
+    {
+        if (string.IsNullOrEmpty(input)) return string.Empty;
+        var s = input.Trim();
+        return s.Length <= max ? s : s.Substring(0, max).TrimEnd() + "…";
+    }
+
+    private static string Snippet(string html, int max = 220)
+    {
+        return Truncate(StripHtml(html), max);
+    } }
+<div class="d-flex justify-content-end align-items-center mb-3">
+    <a asp-action="Index" class="btn btn-primary">Nova Página</a>
+</div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Lista de Páginas</h1>
+    <div class="d-flex align-items-center gap-2">
+        <form method="get" asp-action="Listar">
+            <select name="pageSize" class="form-select form-select-sm rounded" onchange="this.form.submit()" style="width: 70px;">
+                @{ var sizes = new[] { 5, 10, 20, 50 };
+                                foreach (var s in sizes)
+                                {
+                    <option value="@s" selected="@(s == pageSize)">@s</option> } }
+            </select>
+        </form>
+    </div>
+</div>
 
 @foreach (var pagina in Model.Where(p => p.CdPai == null))
 {
-<div class="card mb-4">
+<div class="card mb-3 shadow-sm">
     <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <strong>Página:</strong> @pagina.Titulo
+        <div class="fw-bold">Página: @pagina.Titulo</div>
         <button class="btn btn-sm btn-light toggle-content" data-target="pagina-@pagina.Codigo">
             ▼ Expandir
         </button>
     </div>
-    <div class="card-body" id="pagina-@pagina.Codigo" style="display: none;">
-        <p><strong>Conteúdo:</strong> @Html.Raw(pagina.Conteudo)</p>
-        <p><strong>URL:</strong> @pagina.Url</p>
-        <p><strong>Banner:</strong> @pagina.Banner</p>
 
-        <h5>Botões da Página</h5>
-        @if (pagina.Botoes != null && pagina.Botoes.Any())
-        {
-<ul>
-    @foreach (var botao in pagina.Botoes)
-    {
-<li class="mb-2">
-    <strong>@botao.Nome</strong>
-    &nbsp;→&nbsp;
-    <a href="@botao.Link" target="_blank">@botao.Link</a>
-    <small class="text-muted"> (Linha: @botao.Linha, Coluna: @botao.Coluna)</small>
-
-    <div class="mt-1">
-        <a asp-controller="Botao" asp-action="Editar" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-warning ms-2">✏️</a>
-        <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-danger ms-1">🗑️</a>
-    </div>
-</li>                    }
-</ul> }
-                else
-                {
-<p><em>Sem botões.</em></p>}
-
-        <h5 class="mt-4">Tópicos</h5>
-
-        @if (pagina.PaginaFilhos != null && pagina.PaginaFilhos.Any())
-        {
-@for (int i = 0; i < pagina.PaginaFilhos.Count; i++)
-{
-    var topico = pagina.PaginaFilhos[i];
-<div class="border-start border-3 ps-3 mb-3">
-    <hr />
-    <h6><strong>Tópico:</strong> @topico.Titulo</h6>
-    <p><strong>Ordem:</strong> @topico.Ordem</p>
-    <p><strong>Conteúdo:</strong> @Html.Raw(topico.Conteudo)</p>
-    <p><strong>URL:</strong> @topico.Url</p>
-    <p><strong>Banner:</strong> @topico.Banner</p>
-
-    <div class="mb-2">
-        @* Botões de mover (implemente as actions em PaginaController se desejar) *@
-        @if (i > 0)
-        {
-<form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
-    <input type="hidden" name="idA" value="@pagina.PaginaFilhos[i].Codigo" />
-    <input type="hidden" name="idB" value="@pagina.PaginaFilhos[i-1].Codigo" />
-    <button type="submit" class="btn btn-sm btn-outline-secondary">🔼</button>
-</form>}
-        @if (i < pagina.PaginaFilhos.Count - 1)
-        {
-<form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline ms-1">
-    <input type="hidden" name="idA" value="@pagina.PaginaFilhos[i].Codigo" />
-    <input type="hidden" name="idB" value="@pagina.PaginaFilhos[i+1].Codigo" />
-    <button type="submit" class="btn btn-sm btn-outline-secondary">🔽</button>
-</form>}
-
-        <a asp-action="Editar" asp-route-id="@topico.Codigo" class="btn btn-sm btn-warning ms-2">✏️ Editar</a>
-        <a asp-action="Excluir" asp-route-id="@topico.Codigo" class="btn btn-sm btn-danger ms-1">🗑️ Excluir</a>
-    </div>
-
-    <strong>Botões do Tópico:</strong>
-    @if (topico.Botoes != null && topico.Botoes.Any())
-    {
-<ul>
-    @foreach (var b in topico.Botoes)
-    {
-<li>
-    <strong>@b.Nome</strong> → <a href="@b.Link" target="_blank">@b.Link</a>
-    <small class="text-muted"> (Linha: @b.Linha, Coluna: @b.Coluna)</small>
-    <a asp-controller="Botao" asp-action="Editar" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-warning ms-2">✏️</a>
-    <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-danger ms-1">🗑️</a>
-</li>}
-</ul> }
-                        else
-                        {
-<p><em>Sem botões nesse tópico.</em></p>                        }
-</div>} }
-                else
-                {
-<p><em>Sem tópicos vinculados.</em></p>}
-
-        <hr />
-        <div class="mt-3">
-            <a asp-action="Editar" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-warning">Editar</a>
-            <a asp-action="Detalhes" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-info">Detalhes</a>
-            <a asp-action="Excluir" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-danger">Excluir</a>
-            <a asp-action="Exibir" asp-route-id="@pagina.Url" class="btn btn-sm btn-success" target="_blank">Exibir</a>
+    <div class="card-body" id="pagina-@pagina.Codigo" style="display:none;">
+        <p class="mb-2">
+            <strong>Resumo:</strong>
+            @Snippet(pagina.Conteudo, 220)
+        </p>
+        <div class="d-flex flex-wrap">
+            <a asp-action="Gerenciar" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-secondary mx-1 me-2">
+                Editar
+            </a>
+            <a asp-action="Excluir" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-danger mx-1 me-2">
+                Excluir
+            </a>
+            <a asp-action="Exibir" asp-route-id="@pagina.Url" class="btn btn-sm btn-success mx-1">
+                Exibir
+            </a>
         </div>
     </div>
 </div>}
+
+@if (totalPages > 1)
+{
+<nav aria-label="Paginação">
+    <ul class="pagination justify-content-center">
+        <li class="page-item @(page <= 1 ? "disabled" : "")">
+            <a class="page-link" href="@(page > 1 ? BuildPageUrl(page - 1) : "#")" tabindex="-1" aria-disabled="@(page <= 1)">
+                « Anterior
+            </a>
+        </li>
+
+        @for (int p = 1; p <= totalPages; p++)
+        {
+<li class="page-item @(p == page ? "active" : "")">
+    <a class="page-link" href="@BuildPageUrl(p)">@p</a>
+</li>
+}
+
+        <li class="page-item @(page >= totalPages ? "disabled" : "")">
+            <a class="page-link" href="@(page < totalPages ? BuildPageUrl(page + 1) : "#")" aria-disabled="@(page >= totalPages)">
+                Próxima »
+            </a>
+        </li>
+    </ul>
+</nav>}
 
 @section Scripts {
     <script>
