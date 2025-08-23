@@ -109,22 +109,34 @@ namespace Paginas.Application.Services
             if (pagina == null) return;
 
             model.Url = model.Url?.Trim();
-            var tipo = pagina.Tipo;
 
-            pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, tipo);
+            // Atualiza campos principais
+            pagina.Atualizar(model.Titulo, model.Conteudo, model.Url, pagina.Tipo);
 
+            // Atualiza banner
             if (!string.IsNullOrWhiteSpace(model.Banner) && model.Banner != pagina.Banner)
                 pagina.DefinirBanner(model.Banner);
 
+            // Atualiza status
             if (model.Publicacao) pagina.Publicar(); else pagina.Despublicar();
             if (model.Status) pagina.Ativar(); else pagina.Desativar();
 
-            // só adiciona botões se for tópico, não altera botões existentes da página principal
-            if (tipo == TipoPagina.Topico && model.Botoes != null && model.Botoes.Any())
+            // ✅ CORREÇÃO: Adiciona novos botões para PÁGINA PRINCIPAL e TÓPICOS
+            if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
                 {
                     if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
+
+                    // Opcional: evita botões duplicados
+                    var existe = pagina.Botoes.Any(bot =>
+                        bot.Nome == b.Nome &&
+                        bot.Link == b.Link &&
+                        bot.Linha == b.Linha &&
+                        bot.Coluna == b.Coluna);
+
+                    if (existe) continue;
+
                     var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, pagina.Codigo, b.Linha, b.Coluna);
                     pagina.AdicionarBotao(botao);
                 }
