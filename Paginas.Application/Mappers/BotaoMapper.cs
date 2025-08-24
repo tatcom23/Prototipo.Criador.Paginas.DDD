@@ -15,8 +15,7 @@ namespace Paginas.Application.Mappers
                 link: dto.Link,
                 tipo: (TipoBotao)dto.Tipo,
                 cdPaginaIntrodutoria: dto.CdPaginaIntrodutoria,
-                linha: dto.Linha,
-                coluna: dto.Coluna
+                ordem: dto.Ordem
             );
 
             typeof(Botao).GetProperty(nameof(Botao.Codigo))?.SetValue(botao, dto.Codigo);
@@ -36,10 +35,10 @@ namespace Paginas.Application.Mappers
                 Link = entity.Link,
                 Tipo = (int)entity.Tipo,
                 CdPaginaIntrodutoria = entity.CdPaginaIntrodutoria,
-                Linha = entity.Linha,
-                Coluna = entity.Coluna,
+                Ordem = entity.Ordem,
                 Status = entity.Status,
-                Versao = entity.Versao
+                Criacao = entity.Criacao,
+                Atualizacao = entity.Atualizacao
             };
         }
     }

@@ -13,5 +13,6 @@ namespace Paginas.Domain.Repositories.Interfaces
         Task AtualizarAsync(Botao botao);
         Task RemoverAsync(int id);
         Task SalvarAlteracoesAsync();
+        Task<int> ObterMaxOrdemPorPaginaAsync(int cdPaginaIntrodutoria);
     }
 }

@@ -16,15 +16,15 @@ namespace Paginas.Infrastructure.Data.Configurations
                 .HasColumnName("cd_botao_pagina_introdutoria")
                 .HasColumnType("int")
                 .IsRequired()
-                .ValueGeneratedOnAdd(); // <-- importante
+                .ValueGeneratedOnAdd();
 
             builder.Property(b => b.Nome)
                 .HasColumnName("nm_botao_pagina_introdutoria")
-                .HasColumnType("varchar(200)");
+                .HasColumnType("nvarchar(255)");
 
             builder.Property(b => b.Link)
                 .HasColumnName("ds_link_botao_pagina_introdutoria")
-                .HasColumnType("varchar(500)");
+                .HasColumnType("nvarchar(255)");
 
             builder.Property(b => b.Tipo)
                 .HasColumnName("cd_tipo_botao_pagina_introdutoria")
@@ -34,13 +34,11 @@ namespace Paginas.Infrastructure.Data.Configurations
                 .HasColumnName("cd_pagina_introdutoria")
                 .HasColumnType("int");
 
-            builder.Property(b => b.Linha)
-                .HasColumnName("cd_ordem_linha_botao_pagina_introdutoria")
-                .HasColumnType("int");
-
-            builder.Property(b => b.Coluna)
-                .HasColumnName("cd_ordem_coluna_botao_pagina_introdutoria")
-                .HasColumnType("int");
+            // ✅ Mapeia Ordem para a nova coluna
+            builder.Property(b => b.Ordem)
+                .HasColumnName("cd_ordem_botao_pagina_introdutoria")
+                .HasColumnType("int")
+                .IsRequired();
 
             builder.Property(b => b.Criacao)
                 .HasColumnName("dt_criacao_botao_pagina_introdutoria")
@@ -54,11 +52,7 @@ namespace Paginas.Infrastructure.Data.Configurations
                 .HasColumnName("ck_status_botao_pagina_introdutoria")
                 .HasColumnType("bit");
 
-            builder.Property(b => b.Versao)
-                .HasColumnName("cd_versao_botao_pagina_introdutoria")
-                .HasColumnType("int");
-
-            // FK configurada no PaginaConfiguration, mas deixamos claro aqui também (opcional)
+            // Relacionamento
             builder.HasOne(b => b.Pagina)
                    .WithMany(p => p.Botoes)
                    .HasForeignKey(b => b.CdPaginaIntrodutoria)

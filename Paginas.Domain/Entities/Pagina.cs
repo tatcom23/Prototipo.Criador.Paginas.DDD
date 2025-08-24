@@ -20,7 +20,6 @@ namespace Paginas.Domain.Entities
         public int Ordem { get; private set; }
         public int Versao { get; private set; }
         public string? Banner { get; private set; }        // <- agora anulável
-        public int? CdVersao { get; private set; }
 
         // Navegação
         public Pagina? PaginaPai { get; private set; }     // <- pode ser nulo

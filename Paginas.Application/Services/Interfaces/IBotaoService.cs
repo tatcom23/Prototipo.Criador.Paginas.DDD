@@ -8,5 +8,8 @@ namespace Paginas.Application.Services.Interfaces
         Task<BotaoDTO> BuscarPorIdAsync(int id);
         Task AtualizarAsync(BotaoDTO botaoDto);
         Task ExcluirAsync(int id);
+        Task AtualizarOrdemAsync(int idA, int idB);
+        Task AtualizarOrdemIndividualAsync(int botaoId, int novaOrdem);
+        Task CriarAsync(BotaoDTO dto, int cdPaginaIntrodutoria);
     }
 }

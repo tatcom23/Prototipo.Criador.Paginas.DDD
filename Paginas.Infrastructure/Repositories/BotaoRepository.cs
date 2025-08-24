@@ -56,5 +56,15 @@ namespace Paginas.Infrastructure.Repositories
         {
             await _context.SaveChangesAsync();
         }
+
+        // ✅ Método adicionado corretamente dentro da classe
+        public async Task<int> ObterMaxOrdemPorPaginaAsync(int cdPaginaIntrodutoria)
+        {
+            var max = await _context.Botoes
+                .Where(b => b.CdPaginaIntrodutoria == cdPaginaIntrodutoria)
+                .MaxAsync(b => (int?)b.Ordem); // Usa (int?) para lidar com coleção vazia
+
+            return max ?? 0; // Se não houver botões, retorna 0
+        }
     }
 }

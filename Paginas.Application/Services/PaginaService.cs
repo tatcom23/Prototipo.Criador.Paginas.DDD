@@ -14,10 +14,12 @@ namespace Paginas.Application.Services
     public class PaginaService : IPaginaService
     {
         private readonly IPaginaRepository _repo;
+        private readonly IBotaoService _botaoService; // ✅ Injetado
 
-        public PaginaService(IPaginaRepository repo)
+        public PaginaService(IPaginaRepository repo, IBotaoService botaoService)
         {
             _repo = repo;
+            _botaoService = botaoService;
         }
 
         public async Task<List<PaginaDTO>> ListarAsync()
@@ -57,19 +59,21 @@ namespace Paginas.Application.Services
             if (!string.IsNullOrWhiteSpace(model.Banner))
                 pagina.DefinirBanner(model.Banner);
 
-            // Adicionar botões da página principal e tópicos
+            await _repo.AdicionarAsync(pagina);
+            await _repo.SalvarAlteracoesAsync();
+
+            // Agora o código da página está gerado
+            // ✅ Adiciona botões usando o BotaoService
             if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
                 {
                     if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
-                    var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, pagina.Codigo, b.Linha, b.Coluna);
-                    pagina.AdicionarBotao(botao);
+
+                    // ✅ Usa o serviço para criar com ordem automática
+                    await _botaoService.CriarAsync(b, pagina.Codigo);
                 }
             }
-
-            await _repo.AdicionarAsync(pagina);
-            await _repo.SalvarAlteracoesAsync();
 
             // Adiciona tópicos (filhos)
             if (model.PaginaFilhos != null && model.PaginaFilhos.Any())
@@ -91,11 +95,10 @@ namespace Paginas.Application.Services
                         foreach (var b in topico.Botoes)
                         {
                             if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
-                            var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, sub.Codigo, b.Linha, b.Coluna);
-                            sub.AdicionarBotao(botao);
+
+                            // ✅ Usa o serviço para criar botões do tópico
+                            await _botaoService.CriarAsync(b, sub.Codigo);
                         }
-                        await _repo.AtualizarAsync(sub);
-                        await _repo.SalvarAlteracoesAsync();
                     }
                 }
             }
@@ -121,35 +124,35 @@ namespace Paginas.Application.Services
             if (model.Publicacao) pagina.Publicar(); else pagina.Despublicar();
             if (model.Status) pagina.Ativar(); else pagina.Desativar();
 
-            // ✅ CORREÇÃO: Adiciona novos botões para PÁGINA PRINCIPAL e TÓPICOS
+            // ✅ Adiciona novos botões via BotaoService
             if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
                 {
                     if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
 
-                    // Opcional: evita botões duplicados
+                    // Evita duplicatas por Nome + Link
                     var existe = pagina.Botoes.Any(bot =>
                         bot.Nome == b.Nome &&
-                        bot.Link == b.Link &&
-                        bot.Linha == b.Linha &&
-                        bot.Coluna == b.Coluna);
+                        bot.Link == b.Link);
 
                     if (existe) continue;
 
-                    var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, pagina.Codigo, b.Linha, b.Coluna);
-                    pagina.AdicionarBotao(botao);
+                    // ✅ Usa o serviço para criar com ordem automática
+                    await _botaoService.CriarAsync(b, pagina.Codigo);
                 }
             }
 
             // Adiciona novos tópicos
             if (model.PaginaFilhos != null && model.PaginaFilhos.Any())
             {
-                int ordem = (await _repo.ListarFilhosAsync(pagina.Codigo)).Count + 1;
+                var topicosExistentes = await _repo.ListarFilhosAsync(pagina.Codigo);
+                int proximaOrdemTopico = topicosExistentes.Count + 1;
+
                 foreach (var topico in model.PaginaFilhos)
                 {
                     var sub = new Pagina(topico.Titulo, topico.Conteudo, topico.Url?.Trim(), TipoPagina.Topico, pagina.Codigo);
-                    sub.AtualizarOrdem(ordem++);
+                    sub.AtualizarOrdem(proximaOrdemTopico++);
 
                     if (!string.IsNullOrWhiteSpace(topico.Banner))
                         sub.DefinirBanner(topico.Banner);
@@ -162,11 +165,10 @@ namespace Paginas.Application.Services
                         foreach (var b in topico.Botoes)
                         {
                             if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
-                            var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, sub.Codigo, b.Linha, b.Coluna);
-                            sub.AdicionarBotao(botao);
+
+                            // ✅ Usa o serviço para criar botões do tópico
+                            await _botaoService.CriarAsync(b, sub.Codigo);
                         }
-                        await _repo.AtualizarAsync(sub);
-                        await _repo.SalvarAlteracoesAsync();
                     }
                 }
             }
@@ -181,19 +183,19 @@ namespace Paginas.Application.Services
 
             var sub = new Pagina(model.Titulo, model.Conteudo, model.Url?.Trim(), TipoPagina.Topico, cdPai);
 
-            // Botões de tópicos
+            await _repo.AdicionarAsync(sub);
+            await _repo.SalvarAlteracoesAsync();
+
+            // ✅ Usa BotaoService para criar botões
             if (model.Botoes != null && model.Botoes.Any())
             {
                 foreach (var b in model.Botoes)
                 {
                     if (string.IsNullOrWhiteSpace(b.Nome) || string.IsNullOrWhiteSpace(b.Link)) continue;
-                    var botao = new Botao(b.Nome, b.Link, TipoBotao.Primario, sub.Codigo, b.Linha, b.Coluna);
-                    sub.AdicionarBotao(botao);
+
+                    await _botaoService.CriarAsync(b, sub.Codigo);
                 }
             }
-
-            await _repo.AdicionarAsync(sub);
-            await _repo.SalvarAlteracoesAsync();
         }
 
         public async Task ExcluirAsync(int id)

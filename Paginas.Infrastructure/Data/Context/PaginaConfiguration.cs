@@ -67,10 +67,6 @@ namespace Paginas.Infrastructure.Data.Configurations
                 .HasColumnName("nm_banner_pagina_introdutoria")
                 .HasColumnType("varchar(200)");
 
-            builder.Property(p => p.CdVersao)
-                .HasColumnName("cd_versao_pagina_introdutoria")
-                .HasColumnType("int");
-
             // Relacionamento: Pagina -> Botoes (1:N) com cascade para limpeza em testes
             builder.HasMany(p => p.Botoes)
                 .WithOne(b => b.Pagina)

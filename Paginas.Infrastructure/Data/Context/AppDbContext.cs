@@ -25,7 +25,7 @@ namespace Paginas.Infrastructure.Data.Context
             // Se não estiver configurado externamente, usar SQL Server com string de conexão padrão
             if (!optionsBuilder.IsConfigured)
             {
-                optionsBuilder.UseSqlServer(@"Server=localhost\SQLEXPRESS;Database=PaginaIntrodutoria;Trusted_Connection=True;");
+                optionsBuilder.UseSqlServer(@"Server=localhost\SQLEXPRESS;Database=PaginaIntrodutoria_v2;Trusted_Connection=True;");
             }
         }
 

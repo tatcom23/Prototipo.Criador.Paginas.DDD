@@ -1,16 +1,21 @@
 ﻿@model Paginas.Application.DTOs.PaginaDTO
 
-@{ ViewData["Title"] = "Detalhes da Página";
+@{
+    ViewData["Title"] = "Detalhes da Página";
 
-                // Organiza os tópicos filhos
-                var topicos = Model.PaginaFilhos?
-                                .Where(t => t.CdPai == Model.Codigo)
-                                .OrderBy(t => t.Ordem)
-                                .ToList() ?? new List<Paginas.Application.DTOs.PaginaDTO>(); }
+    var topicos = Model.PaginaFilhos?
+                    .Where(t => t.CdPai == Model.Codigo)
+                    .OrderBy(t => t.Ordem)
+                    .ToList() ?? new List<Paginas.Application.DTOs.PaginaDTO>();
+
+    var botoesOrdenados = Model.Botoes?
+        .OrderBy(b => b.Ordem)
+        .ToList() ?? new List<Paginas.Application.DTOs.BotaoDTO>();
+}
 
 <h1>@ViewData["Title"]</h1>
 
-<div class="card">
+<div class="card mb-4">
     <div class="card-body">
         <h4 class="card-title">@Model.Titulo</h4>
 
@@ -22,7 +27,16 @@
             <dd class="col-sm-9">@Model.Url</dd>
 
             <dt class="col-sm-3">Banner</dt>
-            <dd class="col-sm-9">@Model.Banner</dd>
+            <dd class="col-sm-9">
+                @if (!string.IsNullOrEmpty(Model.Banner))
+                {
+                    <a href="@Model.Banner" target="_blank">Ver imagem</a>
+                }
+                else
+                {
+                    <em>Nenhum</em>
+                }
+            </dd>
 
             <dt class="col-sm-3">Status</dt>
             <dd class="col-sm-9">@((Model.Status) ? "Ativo" : "Inativo")</dd>
@@ -32,86 +46,102 @@
 
             @if (Model.Atualizacao.HasValue)
             {
-<dt class="col-sm-3">Atualizada em</dt>
-                <dd class="col-sm-9">@Model.Atualizacao.Value.ToString("dd/MM/yyyy HH:mm")</dd>            }
+                <dt class="col-sm-3">Atualizada em</dt>
+                <dd class="col-sm-9">@Model.Atualizacao.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+            }
         </dl>
     </div>
 </div>
 
+<!-- Botões -->
 <h4 class="mt-4">Botões</h4>
-@if (Model.Botoes != null && Model.Botoes.Any())
+@if (botoesOrdenados.Any())
 {
-<table class="table table-bordered">
-    <thead class="table-light">
-        <tr>
-            <th>Nome</th>
-            <th>Link</th>
-            <th>Linha</th>
-            <th>Coluna</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var botao in Model.Botoes)
-        {
-<tr>
-    <td>@botao.Nome</td>
-    <td><a href="@botao.Link" target="_blank">@botao.Link</a></td>
-    <td>@botao.Linha</td>
-    <td>@botao.Coluna</td>
-</tr>}
-    </tbody>
-</table> }
-            else
+    <table class="table table-bordered table-striped">
+        <thead class="table-light">
+            <tr>
+                <th>Ordem</th>
+                <th>Nome</th>
+                <th>Link</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var botao in botoesOrdenados)
             {
-<p class="text-muted">Essa página não possui botões cadastrados.</p>}
+                <tr>
+                    <td>@botao.Ordem</td>
+                    <td>@botao.Nome</td>
+                    <td><a href="@botao.Link" target="_blank">@botao.Link</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">Essa página não possui botões cadastrados.</p>
+}
 
+<!-- Tópicos Vinculados -->
 <h4 class="mt-5">Tópicos Vinculados</h4>
 @if (topicos.Any())
 {
-<table class="table table-striped">
-    <thead class="table-light">
-        <tr>
-            <th>Ordem</th>
-            <th>Título</th>
-            <th>Conteúdo</th>
-            <th>URL</th>
-            <th>Banner</th>
-            <th>Botões</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var t in topicos)
-        {
-<tr>
-    <td>@t.Ordem</td>
-    <td>@t.Titulo</td>
-    <td>@Html.Raw(t.Conteudo)</td>
-    <td>@t.Url</td>
-    <td>@t.Banner</td>
-    <td>
-        @if (t.Botoes != null && t.Botoes.Any())
-        {
-<ul class="mb-0 ps-3">
-    @foreach (var b in t.Botoes)
-    {
-<li>
-    <strong>@b.Nome</strong> -
-    <a href="@b.Link" target="_blank">@b.Link</a>
-    (L: @b.Linha, C: @b.Coluna)
-</li>}
-</ul> }
-                    else
-                    {
-<span class="text-muted"><em>Sem botões</em></span>}
-    </td>
-</tr>}
-    </tbody>
-</table> }
-            else
+    <table class="table table-striped table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Ordem</th>
+                <th>Título</th>
+                <th>Conteúdo</th>
+                <th>URL</th>
+                <th>Banner</th>
+                <th>Botões</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var t in topicos)
             {
-<p class="text-muted">Essa página não possui tópicos vinculados.</p>}
+                var botoesTopico = t.Botoes?.OrderBy(b => b.Ordem).ToList() ?? new List<Paginas.Application.DTOs.BotaoDTO>();
+                <tr>
+                    <td>@t.Ordem</td>
+                    <td>@t.Titulo</td>
+                    <td>@Html.Raw(t.Conteudo)</td>
+                    <td>@t.Url</td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(t.Banner))
+                        {
+                            <a href="@t.Banner" target="_blank">Ver</a>
+                        }
+                        else
+                        {
+                            <em>Nenhum</em>
+                        }
+                    </td>
+                    <td>
+                        @if (botoesTopico.Any())
+                        {
+                            <ul class="mb-0 ps-3">
+                                @foreach (var b in botoesTopico)
+                                {
+                                    <li><strong>@b.Nome</strong> → <a href="@b.Link" target="_blank">@b.Link</a> (Ordem: @b.Ordem)</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <span class="text-muted"><em>Sem botões</em></span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">Essa página não possui tópicos vinculados.</p>
+}
 
-<div class="mt-3">
-    <a asp-action="Exibir" asp-route-url="@Model.Url" class="btn btn-success" target="_blank">Exibir</a>
-    <a asp-action="Listar" class="btn btn-secondary">Voltar para Lista</a>
+<div class="mt-4">
+    <a asp-action="Exibir" asp-route-url="@Model.Url" class="btn btn-success" target="_blank">👁️ Exibir Página</a>
+    <a asp-action="Listar" class="btn btn-secondary">↩️ Voltar para Lista</a>
 </div>

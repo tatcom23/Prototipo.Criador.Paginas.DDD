@@ -37,7 +37,17 @@ namespace Paginas.Web.Controllers
             if (!ModelState.IsValid)
                 return View(model);
 
-            // @todo: refatorar para selecionar o caminho da variável de ambiente appsettings
+            // ✅ 2. Validar duplicidade de URL (somente para páginas principais)
+            if (model.CdPai == null) // é página principal
+            {
+                var paginas = await _paginaService.ListarAsync();
+                if (paginas.Any(p => p.Url == model.Url && p.Codigo != model.Codigo))
+                {
+                    ModelState.AddModelError("Url", "Já existe uma página principal com esta URL.");
+                    return View(model);
+                }
+            }
+
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
@@ -47,14 +57,32 @@ namespace Paginas.Web.Controllers
                 model.Banner = "/imagens/" + nomeBanner;
             }
 
+            // ✅ 3. Gerar âncoras para tópicos com base no título
+            if (model.PaginaFilhos != null)
+            {
+                foreach (var topico in model.PaginaFilhos)
+                {
+                    if (string.IsNullOrWhiteSpace(topico.Url))
+                    {
+                        topico.Url = GerarSlug(topico.Titulo);
+                    }
+                }
+            }
+
             await _paginaService.CriarAsync(model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página criada com sucesso!";
-            return RedirectToAction("Listar");
+
+            // ✅ 1. Após criar página principal → redireciona para Listar
+            if (model.CdPai == null)
+            {
+                return RedirectToAction("Listar");
+            }
+
+            // Se for tópico, vai para Gerenciar da página pai
+            return RedirectToAction("Gerenciar", new { id = model.CdPai });
         }
 
-        // LISTAR com paginação (page = 1-based) e pageSize (limit)
-        // Ex.: GET /Pagina/Listar?page=1&pageSize=10
         [HttpGet("Listar")]
         public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
@@ -63,7 +91,6 @@ namespace Paginas.Web.Controllers
 
             var (itensDto, totalCount) = await _paginaService.ListarPaginadoAsync(page, pageSize);
 
-            // garante listas não nulas
             if (itensDto != null)
             {
                 foreach (var p in itensDto)
@@ -84,17 +111,7 @@ namespace Paginas.Web.Controllers
             ViewBag.TotalCount = totalCount;
             ViewBag.TotalPages = totalPages;
 
-            return View("Listar", itensDto); // View: Listar.cshtml (model List<PaginaDTO>)
-        }
-
-        [HttpGet("Detalhes/{id}")]
-        public async Task<IActionResult> Detalhes(int id)
-        {
-            var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null)
-                return NotFound();
-
-            return View("Detalhes", pagina);
+            return View("Listar", itensDto);
         }
 
         [HttpGet("Editar/{id}")]
@@ -104,7 +121,6 @@ namespace Paginas.Web.Controllers
             if (pagina == null)
                 return NotFound();
 
-            // garante listas não nulas para a View
             pagina.Botoes ??= new List<BotaoDTO>();
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
 
@@ -122,6 +138,19 @@ namespace Paginas.Web.Controllers
             if (paginaExistente == null)
                 return NotFound();
 
+            bool ehTopico = paginaExistente.CdPai.HasValue;
+
+            // ✅ Validar URL duplicada (somente para páginas principais)
+            if (!ehTopico && model.Url != paginaExistente.Url)
+            {
+                var paginas = await _paginaService.ListarAsync();
+                if (paginas.Any(p => p.Url == model.Url && p.Codigo != id))
+                {
+                    ModelState.AddModelError("Url", "Já existe uma página principal com esta URL.");
+                    return View("Editar", model);
+                }
+            }
+
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
@@ -135,10 +164,28 @@ namespace Paginas.Web.Controllers
                 model.Banner = paginaExistente.Banner;
             }
 
+            // ✅ Gerar slug para tópicos sem URL
+            if (model.PaginaFilhos != null)
+            {
+                foreach (var topico in model.PaginaFilhos)
+                {
+                    if (string.IsNullOrWhiteSpace(topico.Url))
+                    {
+                        topico.Url = GerarSlug(topico.Titulo);
+                    }
+                }
+            }
+
             await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
             TempData["Mensagem"] = "Página atualizada com sucesso!";
-            return RedirectToAction("Listar", new { page = 1, pageSize = 10 });
+
+            if (ehTopico)
+            {
+                return RedirectToAction("Gerenciar", "Pagina", new { id = paginaExistente.CdPai.Value });
+            }
+
+            return RedirectToAction("Gerenciar", "Pagina", new { id = model.Codigo });
         }
 
         [HttpGet("Excluir/{id}")]
@@ -156,9 +203,22 @@ namespace Paginas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarExclusao(int id)
         {
+            var pagina = await _paginaService.BuscarPorIdAsync(id);
+            if (pagina == null)
+                return NotFound();
+
+            bool ehTopico = pagina.CdPai.HasValue;
+            int? cdPai = pagina.CdPai;
+
             await _paginaService.ExcluirAsync(id);
 
             TempData["Mensagem"] = "Página excluída com sucesso!";
+
+            if (ehTopico)
+            {
+                return RedirectToAction("Gerenciar", "Pagina", new { id = cdPai.Value });
+            }
+
             return RedirectToAction("Listar");
         }
 
@@ -184,18 +244,14 @@ namespace Paginas.Web.Controllers
             return View("Exibir", pagina);
         }
 
-        // POST helper para atualizar ordem
         [HttpPost("AtualizarOrdem")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> AtualizarOrdem(int idA, int idB, int paginaId)
         {
             await _paginaService.AtualizarOrdemAsync(idA, idB);
-
-            // Redireciona para a própria página usando o id passado
             return RedirectToAction("Gerenciar", new { id = paginaId });
         }
 
-        // NOVA ACTION: tela completa (igual ao expandido atual) para gerenciar uma única página
         [HttpGet("Gerenciar/{id}")]
         public async Task<IActionResult> Gerenciar(int id)
         {
@@ -203,15 +259,25 @@ namespace Paginas.Web.Controllers
             if (pagina == null)
                 return NotFound();
 
-            // garante listas não nulas
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.Botoes ??= new List<BotaoDTO>();
 
-            // se desejar garantir que filhos venham do repo em ordem, pode descomentar:
-            // var filhos = await _paginaService.ListarFilhosAsync(pagina.Codigo);
-            // pagina.PaginaFilhos.Clear(); pagina.PaginaFilhos.AddRange(filhos);
+            return View("Gerenciar", pagina);
+        }
 
-            return View("Gerenciar", pagina); // Views/Pagina/Gerenciar.cshtml
+        // ✅ Método para gerar slug a partir do título
+        private string GerarSlug(string titulo)
+        {
+            if (string.IsNullOrWhiteSpace(titulo))
+                return Guid.NewGuid().ToString();
+
+            return titulo
+                .ToLowerInvariant()
+                .Normalize(System.Text.NormalizationForm.FormD)
+                .Where(c => char.IsLetterOrDigit(c) || c == ' ')
+                .Aggregate("", (s, c) => s += c)
+                .Replace(" ", "-")
+                .Trim('-');
         }
     }
 }

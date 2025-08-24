@@ -1,5 +1,7 @@
 ﻿@model Paginas.Application.DTOs.PaginaDTO
-@{ ViewData["Title"] = "Gerenciar Página"; }
+@{
+    ViewData["Title"] = "Gerenciar Página";
+}
 
 <h1 class="mb-3">Página: @Model.Titulo</h1>
 
@@ -19,7 +21,10 @@
             </div>
 
             <p><strong>URL de acesso:</strong> @Model.Url</p>
-            <p><strong>Banner principal:</strong> @Model.Banner</p>
+            @if (!string.IsNullOrEmpty(Model.Banner))
+            {
+                <p><strong>Banner principal:</strong> @Model.Banner</p>
+            }
 
             <div class="mt-3 d-flex gap-2">
                 <a asp-action="Editar" asp-route-id="@Model.Codigo" class="btn btn-sm btn-warning">Editar</a>
@@ -31,80 +36,149 @@
         <h5>Botões de navegação da página</h5>
         @if (Model.Botoes != null && Model.Botoes.Any())
         {
-<ul class="list-unstyled">
-    @foreach (var botao in Model.Botoes)
-    {
-<li class="mb-2 border rounded p-2 shadow-sm">
-    <strong>@botao.Nome</strong> &nbsp;→&nbsp;
-    <a href="@botao.Link" target="_blank">@botao.Link</a>
-    <small class="text-muted"> (Linha: @botao.Linha, Coluna: @botao.Coluna)</small>
-    <div class="mt-1 d-flex gap-1">
-        <a asp-controller="Botao" asp-action="Editar" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-warning">✏️</a>
-        <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-danger mx-1">🗑️</a>
-    </div>
-</li>                }
-</ul> }
-            else
-            {
-<p><em>Sem botões.</em></p>}
+            // Ordenar botões pela Ordem
+            var botoesOrdenados = Model.Botoes.OrderBy(b => b.Ordem).ToList();
+            <ul class="list-unstyled">
+                @for (int i = 0; i < botoesOrdenados.Count; i++)
+                {
+                    var botao = botoesOrdenados[i];
+                    <li class="mb-2 border rounded p-2 shadow-sm">
+                        <strong>@botao.Nome</strong> &nbsp;→&nbsp;
+                        <a href="@botao.Link" target="_blank">@botao.Link</a>
+                        <small class="text-muted"> (Ordem: @botao.Ordem)</small>
+
+                        <div class="mt-1 d-flex gap-1">
+                            <!-- Botão Subir (▲) -->
+                            @if (i > 0)
+                            {
+                                <form asp-action="AtualizarOrdem" asp-controller="Botao" method="post" class="d-inline">
+                                    <input type="hidden" name="idA" value="@botao.Codigo" />
+                                    <input type="hidden" name="idB" value="@botoesOrdenados[i - 1].Codigo" />
+                                    <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">🔼</button>
+                                </form>
+                            }
+
+                            <!-- Botão Descer (▼) -->
+                            @if (i < botoesOrdenados.Count - 1)
+                            {
+                                <form asp-action="AtualizarOrdem" asp-controller="Botao" method="post" class="d-inline">
+                                    <input type="hidden" name="idA" value="@botao.Codigo" />
+                                    <input type="hidden" name="idB" value="@botoesOrdenados[i + 1].Codigo" />
+                                    <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary">🔽</button>
+                                </form>
+                            }
+
+                            <a asp-controller="Botao" asp-action="Editar" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-warning">✏️</a>
+                            <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@botao.Codigo" class="btn btn-sm btn-outline-danger mx-1">🗑️</a>
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p><em>Sem botões.</em></p>
+        }
 
         <h5 class="mt-4">Tópicos</h5>
         @if (Model.PaginaFilhos != null && Model.PaginaFilhos.Any())
         {
-@for (int i = 0; i < Model.PaginaFilhos.Count; i++)
-{
-    var topico = Model.PaginaFilhos[i];
-<div class="card mb-3 shadow-sm">
-    <div class="card-body">
-        <h6><strong>Título do tópico:</strong> @topico.Titulo</h6>
-        <p><strong>Ordem de visualização do tópico:</strong> @topico.Ordem</p>
-        <p><strong>Descrição do tópico:</strong></p>
-        <div class="border rounded p-3 mb-2">
-            @Html.Raw(topico.Conteudo)
-        </div>
-
-        <div class="d-flex gap-2 mb-2">
-            @if (i > 0)
+            var topicosOrdenados = Model.PaginaFilhos.OrderBy(t => t.Ordem).ToList();
+            @for (int i = 0; i < topicosOrdenados.Count; i++)
             {
-            <form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
-                <input type="hidden" name="idA" value="@topico.Codigo" />
-                <input type="hidden" name="idB" value="@Model.PaginaFilhos[i-1].Codigo" />
-                <input type="hidden" name="paginaId" value="@Model.Codigo" />
-                <button type="submit" class="btn btn-sm btn-outline-secondary mx-1">🔼</button>
-            </form>}
-            @if (i < Model.PaginaFilhos.Count - 1)
-            {
-        <form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
-            <input type="hidden" name="idA" value="@topico.Codigo" />
-            <input type="hidden" name="idB" value="@Model.PaginaFilhos[i+1].Codigo" />
-            <input type="hidden" name="paginaId" value="@Model.Codigo" />
-            <button type="submit" class="btn btn-sm btn-outline-secondary mx-1">🔽</button>
-        </form>}
+                var topico = topicosOrdenados[i];
+                <div class="card mb-3 shadow-sm">
+                    <div class="card-body">
+                        <h6><strong>Título do tópico:</strong> @topico.Titulo</h6>
+                        <p><strong>Ordem de visualização do tópico:</strong> @topico.Ordem</p>
+                        <p><strong>Descrição do tópico:</strong></p>
+                        <div class="border rounded p-3 mb-2">
+                            @Html.Raw(topico.Conteudo)
+                        </div>
 
-            <a asp-action="Editar" asp-route-id="@topico.Codigo" class="btn btn-sm btn-warning">✏️ Editar</a>
-            <a asp-action="Excluir" asp-route-id="@topico.Codigo" class="btn btn-sm btn-danger mx-1">🗑️ Excluir</a>
-        </div>
+                        <div class="d-flex gap-2 mb-2">
+                            <!-- Subir tópico -->
+                            @if (i > 0)
+                            {
+                                <form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
+                                    <input type="hidden" name="idA" value="@topico.Codigo" />
+                                    <input type="hidden" name="idB" value="@topicosOrdenados[i - 1].Codigo" />
+                                    <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary mx-1">🔼</button>
+                                </form>
+                            }
 
-        <strong>Botões de navegação do tópico:</strong>
-        @if (topico.Botoes != null && topico.Botoes.Any())
+                            <!-- Descer tópico -->
+                            @if (i < topicosOrdenados.Count - 1)
+                            {
+                                <form asp-action="AtualizarOrdem" asp-controller="Pagina" method="post" class="d-inline">
+                                    <input type="hidden" name="idA" value="@topico.Codigo" />
+                                    <input type="hidden" name="idB" value="@topicosOrdenados[i + 1].Codigo" />
+                                    <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                    <button type="submit" class="btn btn-sm btn-outline-secondary mx-1">🔽</button>
+                                </form>
+                            }
+
+                            <a asp-action="Editar" asp-route-id="@topico.Codigo" class="btn btn-sm btn-warning">✏️ Editar</a>
+                            <a asp-action="Excluir" asp-route-id="@topico.Codigo" class="btn btn-sm btn-danger mx-1">🗑️ Excluir</a>
+                        </div>
+
+                        <strong>Botões de navegação do tópico:</strong>
+                        @if (topico.Botoes != null && topico.Botoes.Any())
+                        {
+                            var botoesTopicoOrdenados = topico.Botoes.OrderBy(b => b.Ordem).ToList();
+                            <ul class="list-unstyled">
+                                @for (int j = 0; j < botoesTopicoOrdenados.Count; j++)
+                                {
+                                    var b = botoesTopicoOrdenados[j];
+                                    <li class="mb-1 d-flex align-items-center gap-1">
+                                        <strong>@b.Nome</strong> → <a href="@b.Link" target="_blank">@b.Link</a>
+                                        <small class="text-muted"> (Ordem: @b.Ordem)</small>
+
+                                        <!-- Reordenação dos botões do tópico -->
+                                        @if (j > 0 || j < botoesTopicoOrdenados.Count - 1)
+                                        {
+                                            <span class="d-flex gap-1">
+                                                @if (j > 0)
+                                                {
+                                                    <form asp-action="AtualizarOrdem" asp-controller="Botao" method="post" class="d-inline">
+                                                        <input type="hidden" name="idA" value="@b.Codigo" />
+                                                        <input type="hidden" name="idB" value="@botoesTopicoOrdenados[j - 1].Codigo" />
+                                                        <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary">🔼</button>
+                                                    </form>
+                                                }
+                                                @if (j < botoesTopicoOrdenados.Count - 1)
+                                                {
+                                                    <form asp-action="AtualizarOrdem" asp-controller="Botao" method="post" class="d-inline">
+                                                        <input type="hidden" name="idA" value="@b.Codigo" />
+                                                        <input type="hidden" name="idB" value="@botoesTopicoOrdenados[j + 1].Codigo" />
+                                                        <input type="hidden" name="paginaId" value="@Model.Codigo" />
+                                                        <button type="submit" class="btn btn-sm btn-outline-secondary">🔽</button>
+                                                    </form>
+                                                }
+                                            </span>
+                                        }
+
+                                        <a asp-controller="Botao" asp-action="Editar" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-warning mx-1">✏️</a>
+                                        <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-danger">🗑️</a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <p><em>Sem botões nesse tópico.</em></p>
+                        }
+                    </div>
+                </div>
+            }
+        }
+        else
         {
-<ul class="list-unstyled">
-    @foreach (var b in topico.Botoes)
-    {
-<li class="mb-1 d-flex align-items-center gap-1">
-    <strong>@b.Nome</strong> → <a href="@b.Link" target="_blank">@b.Link</a>
-    <small class="text-muted"> (Linha: @b.Linha, Coluna: @b.Coluna)</small>
-    <a asp-controller="Botao" asp-action="Editar" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-warning mx-1">✏️</a>
-    <a asp-controller="Botao" asp-action="Excluir" asp-route-id="@b.Codigo" class="btn btn-sm btn-outline-danger">🗑️</a>
-</li>}
-</ul> }
-                    else
-                    {
-<p><em>Sem botões nesse tópico.</em></p>}
-    </div>
-</div>} }
-            else
-            {
-<p><em>Sem tópicos vinculados.</em></p>}
+            <p><em>Sem tópicos vinculados.</em></p>
+        }
     </div>
 </div>
