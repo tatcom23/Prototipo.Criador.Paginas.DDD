@@ -22,8 +22,14 @@ namespace Paginas.Infrastructure.Tests
             // Cria página
             var pagina = new Pagina("Título Teste", "Conteúdo Teste", "/url-teste", TipoPagina.Principal);
 
-            // Cria botão
-            var botao = new Botao("Botao Teste", "https://exemplo.com", TipoBotao.Primario, pagina.Codigo, 1, 1);
+            // Cria botão usando a nova assinatura (sem código explícito)
+            var botao = new Botao(
+                nome: "Botao Teste",
+                link: "https://exemplo.com",
+                tipo: TipoBotao.Primario,
+                cdPaginaIntrodutoria: pagina.Codigo,
+                ordem: 1
+            );
 
             // Adiciona botão à página
             pagina.AdicionarBotao(botao);
@@ -36,7 +42,7 @@ namespace Paginas.Infrastructure.Tests
             var resultado = await paginaRepo.ObterPorIdAsync(pagina.Codigo);
 
             Assert.NotNull(resultado);
-            Assert.Equal("Título Teste", resultado.Titulo);
+            Assert.Equal("Título Teste", resultado!.Titulo);
 
             Assert.NotNull(resultado.Botoes);
             Assert.Single(resultado.Botoes);
@@ -44,4 +50,3 @@ namespace Paginas.Infrastructure.Tests
         }
     }
 }
-

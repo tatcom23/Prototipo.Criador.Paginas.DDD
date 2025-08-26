@@ -30,6 +30,17 @@ namespace Paginas.Infrastructure.Tests.Entities
         }
 
         [Fact]
+        public void Construtor_DeveAceitarConteudoNuloEConverterHtmlVazioParaNull()
+        {
+            var paginaComConteudoNulo = new Pagina("Título", null, "/url", TipoPagina.Principal);
+            Assert.Null(paginaComConteudoNulo.Conteudo);
+
+            var paginaComHtmlVazio = new Pagina("Título", "<p>&nbsp;</p>", "/url", TipoPagina.Principal);
+            // NormalizeHtmlOrNull deve transformar HTML "vazio" em null
+            Assert.Null(paginaComHtmlVazio.Conteudo);
+        }
+
+        [Fact]
         public void Atualizar_DeveAlterarPropriedadesEIncrementarVersao()
         {
             var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
@@ -73,9 +84,9 @@ namespace Paginas.Infrastructure.Tests.Entities
         {
             var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
 
-            // Observação: aqui usamos cdPaginaIntrodutoria = 1 apenas para construir o botão.
+            // Observação: usamos cdPaginaIntrodutoria = 1 apenas para construir o botão.
             // Em cenários reais o EF vai preencher a FK após salvar a página.
-            var botao = new Botao("Nome Botão", "https://link.com", TipoBotao.Primario, 1, 1, 1);
+            var botao = new Botao("Nome Botão", "https://link.com", TipoBotao.Primario, cdPaginaIntrodutoria: 1, ordem: 1);
 
             pagina.AdicionarBotao(botao);
             Assert.Single(pagina.Botoes);
@@ -98,6 +109,33 @@ namespace Paginas.Infrastructure.Tests.Entities
             var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
 
             Assert.Throws<ArgumentNullException>(() => pagina.RemoverBotao(null!));
+        }
+
+        [Fact]
+        public void DefinirBanner_DeveAtribuirEIncrementarVersao()
+        {
+            var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
+
+            pagina.DefinirBanner("  /imagens/banner.png  ");
+            Assert.Equal("/imagens/banner.png", pagina.Banner);
+            Assert.NotNull(pagina.Atualizacao);
+            Assert.Equal(2, pagina.Versao);
+
+            // limpar o banner passando null ou string vazia
+            pagina.DefinirBanner(null);
+            Assert.Null(pagina.Banner);
+            Assert.Equal(3, pagina.Versao);
+        }
+
+        [Fact]
+        public void AtualizarOrdem_DeveAlterarOrdemEIncrementarVersao()
+        {
+            var pagina = new Pagina("Título", "Conteúdo", "/url", TipoPagina.Principal);
+
+            pagina.AtualizarOrdem(5);
+            Assert.Equal(5, pagina.Ordem);
+            Assert.NotNull(pagina.Atualizacao);
+            Assert.Equal(2, pagina.Versao);
         }
     }
 }

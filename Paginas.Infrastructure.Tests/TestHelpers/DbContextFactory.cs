@@ -1,18 +1,19 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using Microsoft.EntityFrameworkCore;
 using Paginas.Infrastructure.Data.Context;
 
-public static class DbContextFactory
+public static class InMemoryContextFactory
 {
-    public static AppDbContext Create()
+    public static AppDbContext CreateContext()
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
-            .UseSqlServer(@"Server=SEPLAN-0372\SQLTATI;Database=PaginaIntrodutoria;Trusted_Connection=True;")
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()) // banco único por teste
             .Options;
 
         var context = new AppDbContext(options);
 
-        // Opcional: aplicar migrations automaticamente
-        context.Database.Migrate();
+        // Cria todas as tabelas do modelo atual
+        context.Database.EnsureCreated();
 
         return context;
     }
