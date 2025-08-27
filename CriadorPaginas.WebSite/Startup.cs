@@ -1,14 +1,9 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Paginas.Infrastructure.Data.Context;        
-using Paginas.Domain.Repositories.Interfaces;                 
-using Paginas.Infrastructure.Repositories;          
-using Paginas.Application.Services.Interfaces;      
-using Paginas.Application.Services;                 
+using Paginas.Infrastructure.IoC; 
 
 namespace CriadorPaginas.WebSite
 {
@@ -25,21 +20,7 @@ namespace CriadorPaginas.WebSite
         public void ConfigureServices(IServiceCollection services)
         {
             services.AddControllersWithViews();
-
-            // DbContext (SQL Server) -> usa a connection string "DefaultConnection" do appsettings.json
-            services.AddDbContext<AppDbContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
-
-            // Repositórios
-            services.AddScoped<IPaginaRepository, PaginaRepository>();
-            services.AddScoped<IBotaoRepository, BotaoRepository>();
-
-            // Serviços de aplicação
-            services.AddScoped<IPaginaService, PaginaService>();
-            services.AddScoped<IBotaoService, BotaoService>();
-
-            // AutoMapper (se você usar perfis no Application/Infrastructure)
-            // services.AddAutoMapper(typeof(Startup));
+            services.AddInfrastructurePaginas(Configuration);
         }
 
         // 2) Pipeline HTTP
@@ -68,7 +49,6 @@ namespace CriadorPaginas.WebSite
                     name: "default",
                     pattern: "{controller=Pagina}/{action=Index}/{id?}");
             });
-
         }
     }
 }
