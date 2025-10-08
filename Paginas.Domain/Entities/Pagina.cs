@@ -25,6 +25,7 @@ namespace Paginas.Domain.Entities
         public Pagina? PaginaPai { get; private set; }     // <- pode ser nulo
         public List<Pagina> PaginaFilhos { get; private set; } = new();
         public List<Botao> Botoes { get; private set; } = new();
+        public List<Carrossel> Carrosseis { get; private set; } = new();
 
         protected Pagina() { } // EF Core
 
@@ -100,6 +101,18 @@ namespace Paginas.Domain.Entities
         {
             if (botao == null) throw new ArgumentNullException(nameof(botao));
             Botoes.Remove(botao);
+        }
+
+        public void AdicionarCarrossel(Carrossel carrossel)
+        {
+            if (carrossel == null) throw new ArgumentNullException(nameof(carrossel));
+            Carrosseis.Add(carrossel);
+        }
+
+        public void RemoverCarrossel(Carrossel carrossel)
+        {
+            if (carrossel == null) throw new ArgumentNullException(nameof(carrossel));
+            Carrosseis.Remove(carrossel);
         }
     }
 }

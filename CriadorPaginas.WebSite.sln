@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.34407.143
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36301.6 d17.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CriadorPaginas.WebSite", "CriadorPaginas.WebSite\CriadorPaginas.WebSite.csproj", "{8F8CD672-7DA7-4DDA-B1AC-532C9455CD4D}"
 EndProject

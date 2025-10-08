@@ -8,6 +8,8 @@ namespace Paginas.Infrastructure.Data.Context
     {
         public DbSet<Pagina> Paginas { get; set; }
         public DbSet<Botao> Botoes { get; set; }
+        public DbSet<Carrossel> Carrosseis { get; set; }
+        public DbSet<CarrosselImagem> CarrosselImagens { get; set; }
 
         // Construtor padrão usado para injeção de dependência
         public AppDbContext(DbContextOptions<AppDbContext> options)
@@ -19,6 +21,8 @@ namespace Paginas.Infrastructure.Data.Context
         {
             modelBuilder.ApplyConfiguration(new PaginaConfiguration());
             modelBuilder.ApplyConfiguration(new BotaoConfiguration());
+            modelBuilder.ApplyConfiguration(new CarrosselConfiguration());
+            modelBuilder.ApplyConfiguration(new CarrosselImagemConfiguration());
         }
     }
 }

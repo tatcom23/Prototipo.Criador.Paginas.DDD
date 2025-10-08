@@ -16,29 +16,38 @@ namespace Paginas.Web.Controllers
     public class PaginaController : Controller
     {
         private readonly IPaginaService _paginaService;
+        private readonly ICarrosselService _carrosselService;
+        private readonly ICarrosselImagemService _carrosselImagemService;
         private readonly IWebHostEnvironment _env;
 
-        public PaginaController(IPaginaService paginaService, IWebHostEnvironment env)
+        public PaginaController(
+            IPaginaService paginaService,
+            ICarrosselService carrosselService,
+            ICarrosselImagemService carrosselImagemService,
+            IWebHostEnvironment env)
         {
             _paginaService = paginaService ?? throw new ArgumentNullException(nameof(paginaService));
+            _carrosselService = carrosselService ?? throw new ArgumentNullException(nameof(carrosselService));
+            _carrosselImagemService = carrosselImagemService ?? throw new ArgumentNullException(nameof(carrosselImagemService));
             _env = env ?? throw new ArgumentNullException(nameof(env));
         }
 
         [HttpGet("Index")]
-        public IActionResult Index()
-        {
-            return View(new PaginaDTO());
-        }
+        public IActionResult Index() => View(new PaginaDTO());
 
         [HttpPost("Index")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Index([FromForm] PaginaDTO model, IFormFile BannerFile)
+        public async Task<IActionResult> Index(
+            [FromForm] PaginaDTO model,
+            IFormFile BannerFile,
+            [FromForm] List<IFormFile> CarrosselFiles,
+            [FromForm] string carrosselTitulo)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            // ✅ 2. Validar duplicidade de URL (somente para páginas principais)
-            if (model.CdPai == null) // é página principal
+            // Validação URL página principal
+            if (model.CdPai == null)
             {
                 var paginas = await _paginaService.ListarAsync();
                 if (paginas.Any(p => p.Url == model.Url && p.Codigo != model.Codigo))
@@ -48,6 +57,7 @@ namespace Paginas.Web.Controllers
                 }
             }
 
+            // Upload Banner
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
@@ -57,30 +67,58 @@ namespace Paginas.Web.Controllers
                 model.Banner = "/imagens/" + nomeBanner;
             }
 
-            // ✅ 3. Gerar âncoras para tópicos com base no título
+            // Gerar slug para tópicos sem URL
             if (model.PaginaFilhos != null)
             {
                 foreach (var topico in model.PaginaFilhos)
                 {
                     if (string.IsNullOrWhiteSpace(topico.Url))
-                    {
                         topico.Url = GerarSlug(topico.Titulo);
-                    }
                 }
             }
 
+            // Salvar Página principal
             await _paginaService.CriarAsync(model, _env.WebRootPath);
 
-            TempData["Mensagem"] = "Página criada com sucesso!";
-
-            // ✅ 1. Após criar página principal → redireciona para Listar
-            if (model.CdPai == null)
+            // Upload Carrossel e imagens
+            if (CarrosselFiles != null && CarrosselFiles.Any())
             {
-                return RedirectToAction("Listar");
+                // Cria novo carrossel
+                var carrosselDto = new CarrosselDTO
+                {
+                    Titulo = string.IsNullOrWhiteSpace(carrosselTitulo) ? "Carrossel principal" : carrosselTitulo,
+                    Imagens = new List<CarrosselImagemDTO>()
+                };
+
+                // Salvar carrossel no banco
+                var carrosselEntity = await _carrosselService.CriarAsync(carrosselDto, model.Codigo);
+
+                int ordem = 1;
+                foreach (var file in CarrosselFiles)
+                {
+                    if (file.Length <= 0) continue;
+
+                    string nomeImg = Guid.NewGuid() + Path.GetExtension(file.FileName);
+                    string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeImg);
+                    using var stream = new FileStream(caminho, FileMode.Create);
+                    await file.CopyToAsync(stream);
+
+                    var imagemDto = new CarrosselImagemDTO
+                    {
+                        Titulo = file.FileName,
+                        UrlImagem = "/imagens/" + nomeImg,
+                        Ordem = ordem++
+                    };
+
+                    // Salvar cada imagem no banco
+                    await _carrosselImagemService.CriarAsync(imagemDto, carrosselEntity.Codigo);
+                }
             }
 
-            // Se for tópico, vai para Gerenciar da página pai
-            return RedirectToAction("Gerenciar", new { id = model.CdPai });
+            TempData["Mensagem"] = "Página criada com sucesso!";
+            return model.CdPai == null
+                ? RedirectToAction("Listar")
+                : RedirectToAction("Gerenciar", new { id = model.CdPai });
         }
 
         [HttpGet("Listar")]
@@ -118,29 +156,33 @@ namespace Paginas.Web.Controllers
         public async Task<IActionResult> Editar(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null)
-                return NotFound();
+            if (pagina == null) return NotFound();
 
             pagina.Botoes ??= new List<BotaoDTO>();
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
+            pagina.Carrosseis ??= new List<CarrosselDTO>();
 
             return View("Editar", pagina);
         }
 
         [HttpPost("Editar/{id}")]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Editar(int id, [FromForm] PaginaDTO model, IFormFile BannerFile)
+        public async Task<IActionResult> Editar(
+            int id,
+            [FromForm] PaginaDTO model,
+            IFormFile BannerFile,
+            [FromForm] List<IFormFile> CarrosselFiles,
+            [FromForm] string carrosselTitulo)
         {
             if (!ModelState.IsValid)
                 return View("Editar", model);
 
             var paginaExistente = await _paginaService.BuscarPorIdAsync(id);
-            if (paginaExistente == null)
-                return NotFound();
+            if (paginaExistente == null) return NotFound();
 
             bool ehTopico = paginaExistente.CdPai.HasValue;
 
-            // ✅ Validar URL duplicada (somente para páginas principais)
+            // Validação URL página principal
             if (!ehTopico && model.Url != paginaExistente.Url)
             {
                 var paginas = await _paginaService.ListarAsync();
@@ -151,6 +193,7 @@ namespace Paginas.Web.Controllers
                 }
             }
 
+            // Upload Banner
             if (BannerFile != null && BannerFile.Length > 0)
             {
                 string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
@@ -164,37 +207,62 @@ namespace Paginas.Web.Controllers
                 model.Banner = paginaExistente.Banner;
             }
 
-            // ✅ Gerar slug para tópicos sem URL
+            // Gerar slug para tópicos
             if (model.PaginaFilhos != null)
             {
                 foreach (var topico in model.PaginaFilhos)
                 {
                     if (string.IsNullOrWhiteSpace(topico.Url))
-                    {
                         topico.Url = GerarSlug(topico.Titulo);
-                    }
                 }
             }
 
+            // Atualizar página
             await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
-            TempData["Mensagem"] = "Página atualizada com sucesso!";
-
-            if (ehTopico)
+            // Upload Carrossel adicional
+            if (CarrosselFiles != null && CarrosselFiles.Any())
             {
-                return RedirectToAction("Gerenciar", "Pagina", new { id = paginaExistente.CdPai.Value });
+                var carrosselDto = new CarrosselDTO
+                {
+                    Titulo = string.IsNullOrWhiteSpace(carrosselTitulo) ? "Carrossel adicional" : carrosselTitulo,
+                    Imagens = new List<CarrosselImagemDTO>()
+                };
+
+                var carrosselEntity = await _carrosselService.CriarAsync(carrosselDto, id);
+
+                int ordem = 1;
+                foreach (var file in CarrosselFiles)
+                {
+                    if (file.Length <= 0) continue;
+
+                    string nomeImg = Guid.NewGuid() + Path.GetExtension(file.FileName);
+                    string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeImg);
+                    using var stream = new FileStream(caminho, FileMode.Create);
+                    await file.CopyToAsync(stream);
+
+                    var imagemDto = new CarrosselImagemDTO
+                    {
+                        Titulo = file.FileName,
+                        UrlImagem = "/imagens/" + nomeImg,
+                        Ordem = ordem++
+                    };
+
+                    await _carrosselImagemService.CriarAsync(imagemDto, carrosselEntity.Codigo);
+                }
             }
 
-            return RedirectToAction("Gerenciar", "Pagina", new { id = model.Codigo });
+            TempData["Mensagem"] = "Página atualizada com sucesso!";
+            return ehTopico
+                ? RedirectToAction("Gerenciar", new { id = paginaExistente.CdPai.Value })
+                : RedirectToAction("Gerenciar", new { id = id });
         }
 
         [HttpGet("Excluir/{id}")]
         public async Task<IActionResult> Excluir(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null)
-                return NotFound();
-
+            if (pagina == null) return NotFound();
             return View("Excluir", pagina);
         }
 
@@ -204,8 +272,7 @@ namespace Paginas.Web.Controllers
         public async Task<IActionResult> ConfirmarExclusao(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null)
-                return NotFound();
+            if (pagina == null) return NotFound();
 
             bool ehTopico = pagina.CdPai.HasValue;
             int? cdPai = pagina.CdPai;
@@ -214,29 +281,20 @@ namespace Paginas.Web.Controllers
 
             TempData["Mensagem"] = "Página excluída com sucesso!";
 
-            if (ehTopico)
-            {
-                return RedirectToAction("Gerenciar", "Pagina", new { id = cdPai.Value });
-            }
-
-            return RedirectToAction("Listar");
+            return ehTopico
+                ? RedirectToAction("Gerenciar", new { id = cdPai.Value })
+                : RedirectToAction("Listar");
         }
 
         [HttpGet("exibir/{url}", Name = "Pagina_Exibir")]
         public async Task<IActionResult> Exibir(string url)
         {
             var paginas = await _paginaService.ListarAsync();
-            var pagina = paginas
-                .FirstOrDefault(p => p.Url == url && p.Tipo == (int)TipoPagina.Principal);
+            var pagina = paginas.FirstOrDefault(p => p.Url == url && p.Tipo == (int)TipoPagina.Principal);
 
-            if (pagina == null)
-                return NotFound();
+            if (pagina == null) return NotFound();
 
-            var filhos = paginas
-                .Where(p => p.CdPai == pagina.Codigo)
-                .OrderBy(p => p.Ordem)
-                .ToList();
-
+            var filhos = paginas.Where(p => p.CdPai == pagina.Codigo).OrderBy(p => p.Ordem).ToList();
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.PaginaFilhos.Clear();
             pagina.PaginaFilhos.AddRange(filhos);
@@ -256,20 +314,18 @@ namespace Paginas.Web.Controllers
         public async Task<IActionResult> Gerenciar(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null)
-                return NotFound();
+            if (pagina == null) return NotFound();
 
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.Botoes ??= new List<BotaoDTO>();
+            pagina.Carrosseis ??= new List<CarrosselDTO>();
 
             return View("Gerenciar", pagina);
         }
 
-        // ✅ Método para gerar slug a partir do título
         private string GerarSlug(string titulo)
         {
-            if (string.IsNullOrWhiteSpace(titulo))
-                return Guid.NewGuid().ToString();
+            if (string.IsNullOrWhiteSpace(titulo)) return Guid.NewGuid().ToString();
 
             return titulo
                 .ToLowerInvariant()
@@ -279,5 +335,13 @@ namespace Paginas.Web.Controllers
                 .Replace(" ", "-")
                 .Trim('-');
         }
+
+        [HttpGet("Dashboard")]
+        public async Task<IActionResult> Dashboard()
+        {
+            var dados = await _paginaService.ObterDadosDashboardAsync();
+            return View(dados);
+        }
+
     }
 }

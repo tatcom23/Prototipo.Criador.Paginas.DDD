@@ -24,5 +24,6 @@ namespace Paginas.Application.Services.Interfaces
 
         // Atualizar ordem entre duas páginas por id (não expõe entidades)
         Task AtualizarOrdemAsync(int idA, int idB);
+        Task<DashboardViewModel> ObterDadosDashboardAsync();
     }
 }

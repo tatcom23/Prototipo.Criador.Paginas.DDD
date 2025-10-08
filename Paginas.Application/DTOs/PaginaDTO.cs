@@ -13,7 +13,7 @@ namespace Paginas.Application.DTOs
 
         public string Conteudo { get; set; }
         public string Url { get; set; }
-        public int Tipo { get; set; } 
+        public int Tipo { get; set; }
         public int? CdPai { get; set; }
         public bool Publicacao { get; set; }
         public bool Status { get; set; }
@@ -26,5 +26,8 @@ namespace Paginas.Application.DTOs
 
         public List<BotaoDTO> Botoes { get; set; } = new();
         public List<PaginaDTO> PaginaFilhos { get; set; } = new();
+
+        // ✅ Adicionadas propriedades para Carrosséis
+        public List<CarrosselDTO> Carrosseis { get; set; } = new List<CarrosselDTO>();
     }
 }

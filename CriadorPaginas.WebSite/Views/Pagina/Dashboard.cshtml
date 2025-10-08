@@ -1,0 +1,86 @@
+﻿@model Paginas.Application.DTOs.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard de Páginas";
+}
+
+<div class="container mt-4">
+
+    <h2 class="mb-4 text-center">📊 Dashboard de Páginas Introdutórias</h2>
+
+    <!-- CARD TOTAL -->
+    <div class="row mb-4">
+        <div class="col-md-4 offset-md-4">
+            <div class="card text-center shadow">
+                <div class="card-body">
+                    <h5 class="card-title">Total de Páginas Ativas</h5>
+                    <h2 class="text-primary">@Model.TotalPaginasAtivas</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABELA -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">📋 Páginas Ativas</h5>
+            <table class="table table-striped table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Título</th>
+                        <th>Data de Criação</th>
+                        <th>Data de Atualização</th>
+                        <th>Quantidade de Tópicos</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Tabela)
+                    {
+                        <tr>
+                            <td>@item.Titulo</td>
+                            <td>@item.Criacao.ToString("dd/MM/yyyy")</td>
+                            <td>@item.Atualizacao?.ToString("dd/MM/yyyy")</td>
+                            <td>@item.QuantidadeTopicos</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- GRÁFICO -->
+    <div class="card shadow">
+        <div class="card-body">
+            <h5 class="card-title mb-3">📈 Páginas Criadas por Mês</h5>
+            <canvas id="graficoPaginas"></canvas>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('graficoPaginas');
+        const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.MesAno)));
+        const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.Quantidade)));
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Páginas Criadas',
+                    data: data,
+                    borderWidth: 1,
+                    backgroundColor: '#007bff'
+                }]
+            },
+            options: {
+                scales: {
+                    y: { beginAtZero: true }
+                }
+            }
+        });
+    </script>
+}
