@@ -285,19 +285,28 @@ namespace Paginas.Application.Services
             await _repo.AtualizarAsync(b);
             await _repo.SalvarAlteracoesAsync();
         }
-        public async Task<DashboardViewModel> ObterDadosDashboardAsync()
+        public async Task<DashboardViewModel> ObterDadosDashboardAsync(DateTime? dataInicio = null, DateTime? dataFim = null)
         {
             var todasPaginas = await _repo.ListarTodasAsync();
 
-            // Apenas páginas ativas
-            var paginasAtivas = todasPaginas.Where(p => p.Status && p.CdPai == null).ToList();
+            // Filtro base: apenas páginas principais e ativas
+            var paginasAtivas = todasPaginas
+                .Where(p => p.Status && p.CdPai == null)
+                .ToList();
 
-            // Total de páginas ativas
+            // Se o usuário definiu um período, aplica o filtro
+            if (dataInicio.HasValue && dataFim.HasValue)
+            {
+                paginasAtivas = paginasAtivas
+                    .Where(p => p.Criacao.Date >= dataInicio.Value.Date && p.Criacao.Date <= dataFim.Value.Date)
+                    .ToList();
+            }
+
+            // Total de páginas principais ativas no período
             int totalPaginasAtivas = paginasAtivas.Count;
 
-            // Tabela: Título / Data Criação / Data Atualização / Qtde de tópicos
+            // Tabela
             var tabela = paginasAtivas
-                .Where(p => p.CdPai == null) // apenas páginas principais
                 .Select(p => new TabelaItem
                 {
                     Titulo = p.Titulo,
@@ -308,7 +317,7 @@ namespace Paginas.Application.Services
                 .OrderByDescending(p => p.Criacao)
                 .ToList();
 
-            // Gráfico: Quantidade de páginas criadas por mês
+            // Gráfico: quantidade de páginas criadas por mês dentro do período
             var grafico = paginasAtivas
                 .GroupBy(p => new { p.Criacao.Year, p.Criacao.Month })
                 .Select(g => new GraficoItem

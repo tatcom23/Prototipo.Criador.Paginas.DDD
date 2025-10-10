@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Paginas.Application.DTOs;
+using Paginas.Application.Services;
 using Paginas.Application.Services.Interfaces;
 using Paginas.Domain.Enums;
 using System;
@@ -19,18 +20,22 @@ namespace Paginas.Web.Controllers
         private readonly ICarrosselService _carrosselService;
         private readonly ICarrosselImagemService _carrosselImagemService;
         private readonly IWebHostEnvironment _env;
+        private readonly IDashboardService _dashboardService;
 
         public PaginaController(
             IPaginaService paginaService,
             ICarrosselService carrosselService,
             ICarrosselImagemService carrosselImagemService,
-            IWebHostEnvironment env)
+            IWebHostEnvironment env,
+            IDashboardService dashboardService) // ✅ Adicionei aqui
         {
             _paginaService = paginaService ?? throw new ArgumentNullException(nameof(paginaService));
             _carrosselService = carrosselService ?? throw new ArgumentNullException(nameof(carrosselService));
             _carrosselImagemService = carrosselImagemService ?? throw new ArgumentNullException(nameof(carrosselImagemService));
             _env = env ?? throw new ArgumentNullException(nameof(env));
+            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
         }
+
 
         [HttpGet("Index")]
         public IActionResult Index() => View(new PaginaDTO());
@@ -336,11 +341,59 @@ namespace Paginas.Web.Controllers
                 .Trim('-');
         }
 
-        [HttpGet("Dashboard")]
-        public async Task<IActionResult> Dashboard()
+        public async Task<IActionResult> Dashboard(string periodo, DateTime? dataInicio, DateTime? dataFim)
         {
-            var dados = await _paginaService.ObterDadosDashboardAsync();
+            DateTime inicio = DateTime.MinValue;
+            DateTime fim = DateTime.Now;
+
+            switch (periodo)
+            {
+                case "ultimoMes":
+                    inicio = DateTime.Now.AddMonths(-1);
+                    break;
+                case "ultimoTrimestre":
+                    inicio = DateTime.Now.AddMonths(-3);
+                    break;
+                case "ultimoSemestre":
+                    inicio = DateTime.Now.AddMonths(-6);
+                    break;
+                case "ultimoAno":
+                    inicio = DateTime.Now.AddYears(-1);
+                    break;
+                case "personalizado":
+                    if (dataInicio.HasValue && dataFim.HasValue)
+                    {
+                        inicio = dataInicio.Value;
+                        fim = dataFim.Value;
+                    }
+                    break;
+                case "todos":
+                default:
+                    inicio = DateTime.MinValue;
+                    fim = DateTime.Now;
+                    break;
+            }
+
+            var dados = await _paginaService.ObterDadosDashboardAsync(inicio, fim);
             return View(dados);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> DashboardPdf(string graficoBase64)
+        {
+            byte[] graficoBytes = null;
+
+            if (!string.IsNullOrEmpty(graficoBase64))
+            {
+                graficoBase64 = graficoBase64.Replace("data:image/png;base64,", "");
+                graficoBytes = Convert.FromBase64String(graficoBase64);
+            }
+
+            // Recupera os dados reais do dashboard
+            var dados = await _paginaService.ObterDadosDashboardAsync();
+
+            var pdf = _dashboardService.GerarPdf(dados, graficoBytes);
+            return File(pdf, "application/pdf", "Dashboard.pdf");
         }
 
     }

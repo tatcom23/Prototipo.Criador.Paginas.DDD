@@ -1,0 +1,53 @@
+﻿@model Paginas.Application.DTOs.DashboardViewModel
+
+@{
+    ViewData["Title"] = "Dashboard de Páginas";
+    // Se o gráfico estiver no model, use Model.GraficoBase64
+    string graficoBase64 = Model.GraficoBase64;
+}
+
+<div style="font-family: Arial, sans-serif; margin: 20px;">
+
+    <h2 style="text-align:center;">Dashboard de Páginas Introdutórias</h2>
+
+    <!-- TOTAL -->
+    <div style="text-align:center; margin: 20px 0;">
+        <h3>Total de Páginas Ativas</h3>
+        <h1 style="color:#007bff;">@Model.TotalPaginasAtivas</h1>
+    </div>
+
+    <!-- TABELA -->
+    <div style="margin-bottom: 30px;">
+        <h3>Páginas Ativas</h3>
+        <table border="1" cellspacing="0" cellpadding="5" style="width:100%; border-collapse: collapse;">
+            <thead style="background-color:#f0f0f0;">
+                <tr>
+                    <th>Título</th>
+                    <th>Data de Criação</th>
+                    <th>Data de Atualização</th>
+                    <th>Quantidade de Tópicos</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model.Tabela)
+                {
+                    <tr>
+                        <td>@item.Titulo</td>
+                        <td>@item.Criacao.ToString("dd/MM/yyyy")</td>
+                        <td>@item.Atualizacao?.ToString("dd/MM/yyyy") ?? "-"</td>
+                        <td>@item.QuantidadeTopicos</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <!-- GRÁFICO -->
+    @if (!string.IsNullOrEmpty(graficoBase64))
+    {
+        <div style="text-align:center; margin-top:30px;">
+            <h3>Páginas Criadas por Mês</h3>
+            <img src="@graficoBase64" alt="Gráfico" style="max-width:100%; height:auto;" />
+        </div>
+    }
+</div>

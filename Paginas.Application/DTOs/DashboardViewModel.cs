@@ -9,6 +9,7 @@ namespace Paginas.Application.DTOs
 
         public List<TabelaItem> Tabela { get; set; } = new();
         public List<GraficoItem> Grafico { get; set; } = new();
+        public string GraficoBase64 { get; set; }
     }
 
     public class TabelaItem

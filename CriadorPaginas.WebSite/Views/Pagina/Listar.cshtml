@@ -1,14 +1,17 @@
 ﻿@model List<Paginas.Application.DTOs.PaginaDTO>
-@{ ViewData["Title"] = "Lista de Páginas";
+@{
+    ViewData["Title"] = "Lista de Páginas";
 
     int page = ViewBag.Page ?? 1;
     int pageSize = ViewBag.PageSize ?? 10;
     int totalCount = ViewBag.TotalCount ?? (Model?.Count ?? 0);
     int totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
-    string BuildPageUrl(int p) => Url.Action("Listar", "Pagina", new { page = p, pageSize = pageSize })!; }
+    string BuildPageUrl(int p) => Url.Action("Listar", "Pagina", new { page = p, pageSize = pageSize })!;
+}
 
-@functions{ private static string StripHtml(string input)
+@functions {
+    private static string StripHtml(string input)
     {
         if (string.IsNullOrWhiteSpace(input)) return string.Empty;
         return System.Net.WebUtility.HtmlDecode(System.Text.RegularExpressions.Regex.Replace(input, "<.*?>", string.Empty));
@@ -24,19 +27,78 @@
     private static string Snippet(string html, int max = 220)
     {
         return Truncate(StripHtml(html), max);
-    } }
-<div class="d-flex justify-content-end align-items-center mb-3">
-    <a asp-action="Index" class="btn btn-primary">Nova Página</a>
+    }
+}
+
+<!-- 🔹 FILTRO DE PERÍODO PARA DASHBOARD -->
+<div class="p-4 mb-4 border rounded-3 shadow-sm bg-light">
+    <form asp-action="Dashboard" asp-controller="Pagina" method="get"
+          class="row g-4 align-items-end justify-content-between">
+
+        <!-- Tipo de Período -->
+        <div class="col-12 col-md-3">
+            <label for="periodo" class="form-label fw-semibold text-secondary mb-2">
+                📅 Período do Relatório
+            </label>
+            <select id="periodo" name="periodo" class="form-select form-select-sm"
+                    onchange="toggleDatas()">
+                <option value="ultimoMes">Último mês</option>
+                <option value="ultimoTrimestre">Último trimestre</option>
+                <option value="ultimoSemestre">Último semestre</option>
+                <option value="ultimoAno">Último ano</option>
+                <option value="todos" selected>Todas</option>
+                <option value="personalizado">Personalizado</option>
+            </select>
+        </div>
+
+        <!-- Datas personalizadas (inicialmente ocultas) -->
+        <div id="datasPersonalizadas" class="col-12 col-md-5 d-none">
+            <div class="row g-3">
+                <div class="col-12 col-md-6">
+                    <label for="dataInicio" class="form-label mb-2 text-secondary">De:</label>
+                    <input type="date" id="dataInicio" name="dataInicio"
+                           class="form-control form-control-sm shadow-sm" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label for="dataFim" class="form-label mb-2 text-secondary">Até:</label>
+                    <input type="date" id="dataFim" name="dataFim"
+                           class="form-control form-control-sm shadow-sm" />
+                </div>
+            </div>
+        </div>
+
+        <!-- Botão -->
+        <div class="col-12 col-md-2 d-flex justify-content-md-end">
+            <button type="submit" class="btn btn-info btn-sm fw-semibold shadow-sm px-3 w-100 mt-2 mt-md-0">
+                📊 Ver Dashboard
+            </button>
+        </div>
+    </form>
 </div>
+
+<!-- 🔹 BOTÃO NOVA PÁGINA -->
+<div class="d-flex justify-content-end align-items-center mb-4">
+    <a asp-action="Index" class="btn btn-primary btn-sm fw-semibold shadow-sm px-3 py-2">
+        ➕ Nova Página
+    </a>
+</div>
+
+<!-- 🔹 LISTAGEM DE PÁGINAS -->
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h1 class="mb-0">Lista de Páginas</h1>
+    <h1 class="mb-0 fw-semibold text-dark">Lista de Páginas</h1>
     <div class="d-flex align-items-center gap-2">
         <form method="get" asp-action="Listar">
-            <select name="pageSize" class="form-select form-select-sm rounded" onchange="this.form.submit()" style="width: 70px;">
-                @{ var sizes = new[] { 5, 10, 20, 50 };
-                                foreach (var s in sizes)
-                                {
-                    <option value="@s" selected="@(s == pageSize)">@s</option> } }
+            <select name="pageSize"
+                    class="form-select form-select-sm rounded shadow-sm border-secondary-subtle"
+                    onchange="this.form.submit()"
+                    style="width: 80px;">
+                @{
+                    var sizes = new[] { 5, 10, 20, 50 };
+                    foreach (var s in sizes)
+                    {
+                        <option value="@s" selected="@(s == pageSize)">@s</option>
+                    }
+                }
             </select>
         </form>
     </div>
@@ -44,60 +106,53 @@
 
 @foreach (var pagina in Model.Where(p => p.CdPai == null))
 {
-<div class="card mb-3 shadow-sm">
-    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-        <div class="fw-bold">Página: @pagina.Titulo</div>
-        <button class="btn btn-sm btn-light toggle-content" data-target="pagina-@pagina.Codigo">
-            ▼ Expandir
-        </button>
-    </div>
+    <div class="card mb-3 shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <div class="fw-bold">Página: @pagina.Titulo</div>
+            <button class="btn btn-sm btn-light toggle-content" data-target="pagina-@pagina.Codigo">
+                ▼ Expandir
+            </button>
+        </div>
 
-    <div class="card-body" id="pagina-@pagina.Codigo" style="display:none;">
-        <p class="mb-2">
-            <strong>Resumo:</strong>
-            @Snippet(pagina.Conteudo, 220)
-        </p>
-        <div class="d-flex flex-wrap">
-            <a asp-action="Gerenciar" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-warning">
-                Editar
-            </a>
-            <a asp-action="Excluir" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-danger mx-1">
-                Excluir
-            </a>
-            <a asp-action="Exibir" asp-route-id="@pagina.Url" class="btn btn-sm btn-success">
-                Exibir
-            </a>
+        <div class="card-body" id="pagina-@pagina.Codigo" style="display:none;">
+            <p class="mb-2">
+                <strong>Resumo:</strong>
+                @Snippet(pagina.Conteudo, 220)
+            </p>
+            <div class="d-flex flex-wrap">
+                <a asp-action="Gerenciar" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-warning">Editar</a>
+                <a asp-action="Excluir" asp-route-id="@pagina.Codigo" class="btn btn-sm btn-danger mx-1">Excluir</a>
+                <a asp-action="Exibir" asp-route-id="@pagina.Url" class="btn btn-sm btn-success">Exibir</a>
+            </div>
         </div>
     </div>
-</div>}
+}
 
 @if (totalPages > 1)
 {
-<nav aria-label="Paginação">
-    <ul class="pagination justify-content-center">
-        <li class="page-item @(page <= 1 ? "disabled" : "")">
-            <a class="page-link" href="@(page > 1 ? BuildPageUrl(page - 1) : "#")" tabindex="-1" aria-disabled="@(page <= 1)">
-                « Anterior
-            </a>
-        </li>
+    <nav aria-label="Paginação">
+        <ul class="pagination justify-content-center">
+            <li class="page-item @(page <= 1 ? "disabled" : "")">
+                <a class="page-link" href="@(page > 1 ? BuildPageUrl(page - 1) : "#")">« Anterior</a>
+            </li>
 
-        @for (int p = 1; p <= totalPages; p++)
-        {
-<li class="page-item @(p == page ? "active" : "")">
-    <a class="page-link" href="@BuildPageUrl(p)">@p</a>
-</li>
+            @for (int p = 1; p <= totalPages; p++)
+            {
+                <li class="page-item @(p == page ? "active" : "")">
+                    <a class="page-link" href="@BuildPageUrl(p)">@p</a>
+                </li>
+            }
+
+            <li class="page-item @(page >= totalPages ? "disabled" : "")">
+                <a class="page-link" href="@(page<totalPages? BuildPageUrl(page + 1) : "#")">Próxima »</a>
+            </li>
+        </ul>
+    </nav>
 }
-
-        <li class="page-item @(page >= totalPages ? "disabled" : "")">
-            <a class="page-link" href="@(page < totalPages ? BuildPageUrl(page + 1) : "#")" aria-disabled="@(page >= totalPages)">
-                Próxima »
-            </a>
-        </li>
-    </ul>
-</nav>}
 
 @section Scripts {
     <script>
+        // Alterna a exibição do conteúdo das páginas
         document.querySelectorAll('.toggle-content').forEach(button => {
             button.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
@@ -117,5 +172,59 @@
                 }
             });
         });
+
+        // Exibe os campos de data somente quando o período é "personalizado"
+
+        function toggleDatas() {
+            const select = document.getElementById("periodo");
+            const datas = document.getElementById("datasPersonalizadas");
+
+            if (select.value === "personalizado") {
+                datas.classList.remove("d-none");
+                datas.classList.add("fade-in");
+            } else {
+                datas.classList.add("d-none");
+                datas.classList.remove("fade-in");
+                // limpa os campos de data se não for personalizado
+                document.getElementById("dataInicio").value = "";
+                document.getElementById("dataFim").value = "";
+            }
+        }
+
     </script>
+
 }
+<style>
+    /* Suaviza a transição de exibição */
+    .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+
+    /* Melhora o espaçamento interno e o equilíbrio visual */
+    .form-label {
+        font-size: 0.9rem;
+    }
+
+    .form-select-sm, .form-control-sm {
+        height: 36px;
+    }
+
+    .p-4 {
+        padding: 1.75rem !important;
+    }
+</style>

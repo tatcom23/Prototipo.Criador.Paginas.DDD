@@ -32,6 +32,7 @@ namespace Paginas.Infrastructure.IoC
             services.AddScoped<IBotaoService, BotaoService>();
             services.AddScoped<ICarrosselService, CarrosselService>();
             services.AddScoped<ICarrosselImagemService, CarrosselImagemService>();
+            services.AddScoped<IDashboardService, DashboardService>();
 
             return services;
         }
