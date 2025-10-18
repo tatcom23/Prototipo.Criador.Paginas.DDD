@@ -346,19 +346,38 @@ namespace Paginas.Web.Controllers
             DateTime inicio = DateTime.MinValue;
             DateTime fim = DateTime.Now;
 
+            // Se não houver parâmetros, retorna modelo vazio
+            if (string.IsNullOrEmpty(periodo) && !dataInicio.HasValue && !dataFim.HasValue)
+            {
+                return View(new Paginas.Application.DTOs.DashboardViewModel());
+            }
+
             switch (periodo)
             {
+                case "mesAtual":
+                    inicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                    fim = DateTime.Now;
+                    break;
                 case "ultimoMes":
-                    inicio = DateTime.Now.AddMonths(-1);
+                    inicio = new DateTime(DateTime.Now.AddMonths(-1).Year, DateTime.Now.AddMonths(-1).Month, 1);
+                    fim = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddDays(-1);
                     break;
                 case "ultimoTrimestre":
-                    inicio = DateTime.Now.AddMonths(-3);
+                    int currentQuarter = (DateTime.Now.Month - 1) / 3; // 0 a 3 (janeiro-março, abril-junho, julho-setembro, outubro-dezembro)
+                    int previousQuarterStartMonth = (currentQuarter == 0 ? 9 : (currentQuarter - 1) * 3 + 1); // Retrocede ao trimestre anterior
+                    int previousQuarterYear = DateTime.Now.Year;
+                    if (previousQuarterStartMonth > DateTime.Now.Month) previousQuarterYear--; // Ajuste de ano se necessário
+                    inicio = new DateTime(previousQuarterYear, previousQuarterStartMonth, 1);
+                    fim = inicio.AddMonths(3).AddDays(-1); // Último dia do trimestre anterior
                     break;
                 case "ultimoSemestre":
-                    inicio = DateTime.Now.AddMonths(-6);
+                    int mesesSemestre = (DateTime.Now.Month - 1) / 6 * 6;
+                    inicio = new DateTime(DateTime.Now.AddMonths(-6).Year, mesesSemestre + 1, 1);
+                    fim = new DateTime(DateTime.Now.Year, mesesSemestre + 1, 1).AddMonths(6).AddDays(-1);
                     break;
                 case "ultimoAno":
-                    inicio = DateTime.Now.AddYears(-1);
+                    inicio = new DateTime(DateTime.Now.AddYears(-1).Year, 1, 1);
+                    fim = new DateTime(DateTime.Now.Year, 1, 1).AddYears(1).AddDays(-1);
                     break;
                 case "personalizado":
                     if (dataInicio.HasValue && dataFim.HasValue)

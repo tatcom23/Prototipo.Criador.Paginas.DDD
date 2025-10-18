@@ -1,105 +1,195 @@
 ﻿@model Paginas.Application.DTOs.DashboardViewModel
-
 @{
     ViewData["Title"] = "Dashboard de Páginas";
 }
-
 <div class="container mt-4">
+    <!-- 🔹 FILTRO DE PERÍODO -->
+    <div class="p-4 mb-4 border rounded-3 shadow-sm bg-light">
+        <form asp-action="Dashboard" asp-controller="Pagina" method="get"
+              class="row g-4 align-items-end justify-content-between">
+            <!-- Tipo de Período -->
+            <div class="col-12 col-md-3">
+                <label for="periodo" class="form-label fw-semibold text-secondary mb-2">
+                    📅 Período do Relatório
+                </label>
+                <select id="periodo" name="periodo" class="form-select form-select-sm"
+                        onchange="toggleDatas()">
+                    <option value="mesAtual">Mês Atual</option>
+                    <option value="ultimoMes">Último mês</option>
+                    <option value="ultimoTrimestre">Último trimestre</option>
+                    <option value="ultimoSemestre">Último semestre</option>
+                    <option value="ultimoAno">Último ano</option>
+                    <option value="todos">Todas</option>
+                    <option value="personalizado">Personalizado</option>
+                </select>
+            </div>
+            <!-- Datas personalizadas (inicialmente ocultas) -->
+            <div id="datasPersonalizadas" class="col-12 col-md-5 d-none">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label for="dataInicio" class="form-label mb-2 text-secondary">De:</label>
+                        <input type="date" id="dataInicio" name="dataInicio"
+                               class="form-control form-control-sm shadow-sm" />
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label for="dataFim" class="form-label mb-2 text-secondary">Até:</label>
+                        <input type="date" id="dataFim" name="dataFim"
+                               class="form-control form-control-sm shadow-sm" />
+                    </div>
+                </div>
+            </div>
+            <!-- Botão Aplicar -->
+            <div class="col-12 col-md-2 d-flex justify-content-md-end">
+                <button type="submit" class="btn btn-info btn-sm fw-semibold shadow-sm px-3 w-100 mt-2 mt-md-0">
+                    📊 Aplicar Filtro
+                </button>
+            </div>
+        </form>
+    </div>
 
-    <h2 class="mb-4 text-center">📊 Dashboard de Páginas Introdutórias</h2>
-
-    <!-- CARD TOTAL -->
-    <div class="row mb-4">
-        <div class="col-md-4 offset-md-4">
-            <div class="card text-center shadow">
-                <div class="card-body">
-                    <h5 class="card-title">Total de Páginas Ativas</h5>
-                    <h2 class="text-primary">@Model.TotalPaginasAtivas</h2>
+    @if (Model != null && (Model.TotalPaginasAtivas > 0 || Model.Tabela.Any() || Model.Grafico.Any()))
+    {
+        <h2 class="mb-4 text-center">📊 Dashboard de Páginas Introdutórias</h2>
+        <!-- CARD TOTAL -->
+        <div class="row mb-4">
+            <div class="col-md-4 offset-md-4">
+                <div class="card text-center shadow">
+                    <div class="card-body">
+                        <h5 class="card-title">Total de Páginas Ativas</h5>
+                        <h2 class="text-primary">@Model.TotalPaginasAtivas</h2>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
-
-    <!-- TABELA -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <h5 class="card-title mb-3">📋 Páginas Ativas</h5>
-            <table class="table table-striped table-hover">
-                <thead class="table-light">
-                    <tr>
-                        <th>Título</th>
-                        <th>Data de Criação</th>
-                        <th>Data de Atualização</th>
-                        <th>Quantidade de Tópicos</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var item in Model.Tabela)
-                    {
+        <!-- TABELA -->
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">📋 Páginas Ativas</h5>
+                <table class="table table-striped table-hover">
+                    <thead class="table-light">
                         <tr>
-                            <td>@item.Titulo</td>
-                            <td>@item.Criacao.ToString("dd/MM/yyyy")</td>
-                            <td>@item.Atualizacao?.ToString("dd/MM/yyyy")</td>
-                            <td>@item.QuantidadeTopicos</td>
+                            <th>Título</th>
+                            <th>Data de Criação</th>
+                            <th>Data de Atualização</th>
+                            <th>Quantidade de Tópicos</th>
                         </tr>
-                    }
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.Tabela)
+                        {
+                            <tr>
+                                <td>@item.Titulo</td>
+                                <td>@item.Criacao.ToString("dd/MM/yyyy")</td>
+                                <td>@item.Atualizacao?.ToString("dd/MM/yyyy")</td>
+                                <td>@item.QuantidadeTopicos</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
-
-    <!-- GRÁFICO -->
-    <div class="card shadow mb-4">
-        <div class="card-body">
-            <h5 class="card-title mb-3">📈 Páginas Criadas por Mês</h5>
-            <canvas id="graficoPaginas"></canvas>
+        <!-- GRÁFICO -->
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">📈 Páginas Criadas por Mês</h5>
+                <canvas id="graficoPaginas"></canvas>
+            </div>
         </div>
-    </div>
-
-    <!-- FORM PARA GERAR PDF -->
-    <form asp-action="DashboardPdf" method="post" id="pdfForm">
-        <input type="hidden" name="graficoBase64" id="graficoBase64" />
-        <button type="submit" class="btn btn-danger mb-3">
-            📄 Exportar para PDF
-        </button>
-    </form>
+        <!-- FORM PARA GERAR PDF -->
+        <form asp-action="DashboardPdf" method="post" id="pdfForm">
+            <input type="hidden" name="graficoBase64" id="graficoBase64" />
+            <button type="submit" class="btn btn-danger mb-3">
+                📄 Exportar para PDF
+            </button>
+        </form>
+        <!-- BOTÃO VOLTAR -->
+        <a asp-action="Listar" asp-controller="Pagina" class="btn btn-secondary mb-3">
+            ⬅️ Voltar para Lista
+        </a>
+    }
 
 </div>
-
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        const ctx = document.getElementById('graficoPaginas').getContext('2d');
-        const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.MesAno)));
-        const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.Quantidade)));
-
-        const chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Páginas Criadas',
-                    data: data,
-                    borderWidth: 1,
-                    backgroundColor: '#007bff'
-                }]
-            },
-            options: {
-                responsive: true,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { precision: 0 }
-                    }
-                }
+        // Função para toggle das datas personalizadas
+        function toggleDatas() {
+            const select = document.getElementById("periodo");
+            const datas = document.getElementById("datasPersonalizadas");
+            if (select.value === "personalizado") {
+                datas.classList.remove("d-none");
+                datas.classList.add("fade-in");
+            } else {
+                datas.classList.add("d-none");
+                datas.classList.remove("fade-in");
+                // Limpa os campos de data se não for personalizado
+                document.getElementById("dataInicio").value = "";
+                document.getElementById("dataFim").value = "";
             }
-        });
+        }
 
-        // Converter gráfico em Base64 antes de enviar
-        document.getElementById('pdfForm').addEventListener('submit', function (e) {
-            // Atualiza o input hidden com a imagem do gráfico
-            const graficoImg = chart.toBase64Image();
-            document.getElementById('graficoBase64').value = graficoImg;
-        });
+        // Renderiza o gráfico somente se o modelo estiver preenchido
+        @if (Model != null && Model.Grafico.Any())
+        {
+                @:const ctx = document.getElementById('graficoPaginas').getContext('2d');
+                @:const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.MesAno)));
+                @:const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.Quantidade)));
+                @:const chart = new Chart(ctx, {
+                @:    type: 'bar',
+                @:    data: {
+                @:        labels: labels,
+                @:        datasets: [{
+                @:            label: 'Páginas Criadas',
+                @:            data: data,
+                @:            borderWidth: 1,
+                @:            backgroundColor: '#007bff'
+                @:        }]
+                @:    },
+                @:    options: {
+                @:        responsive: true,
+                @:        scales: {
+                @:            y: {
+                @:                beginAtZero: true,
+                @:                ticks: { precision: 0 }
+                @:            }
+                @:        }
+                @:    }
+                @:});
+                // Converter gráfico em Base64 antes de enviar
+                @:document.getElementById('pdfForm').addEventListener('submit', function (e) {
+                @:    const graficoImg = chart.toBase64Image();
+                @:    document.getElementById('graficoBase64').value = graficoImg;
+                @:});
+        }
     </script>
 }
+<style>
+    /* Suaviza a transição de exibição */
+    .fade-in {
+        animation: fadeIn 0.4s ease-in-out;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(-5px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    /* Melhora o espaçamento interno e o equilíbrio visual */
+    .form-label {
+        font-size: 0.9rem;
+    }
+
+    .form-select-sm, .form-control-sm {
+        height: 36px;
+    }
+
+    .p-4 {
+        padding: 1.75rem !important;
+    }
+</style>
