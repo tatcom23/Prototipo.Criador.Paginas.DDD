@@ -12,4 +12,15 @@
         Principal = 1,
         Topico = 2
     }
+
+    public enum PeriodoRelatorio
+    {
+        MesAtual,
+        UltimoMes,
+        UltimoSemestre,
+        UltimoAno,
+        Todos,
+        Personalizado
+    }
+
 }

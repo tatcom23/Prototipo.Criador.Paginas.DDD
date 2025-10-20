@@ -285,8 +285,52 @@ namespace Paginas.Application.Services
             await _repo.AtualizarAsync(b);
             await _repo.SalvarAlteracoesAsync();
         }
-        public async Task<DashboardViewModel> ObterDadosDashboardAsync(DateTime? dataInicio = null, DateTime? dataFim = null)
+        public async Task<DashboardViewModel> ObterDadosDashboardAsync(DateTime? dataInicio = null, DateTime? dataFim = null, PeriodoRelatorio? periodo = null)
         {
+            DateTime hoje = DateTime.Today;
+
+            if (!dataInicio.HasValue || !dataFim.HasValue)
+            {
+                switch (periodo)
+                {
+                    case PeriodoRelatorio.MesAtual:
+                        dataInicio = new DateTime(hoje.Year, hoje.Month, 1);
+                        dataFim = new DateTime(hoje.Year, hoje.Month, DateTime.DaysInMonth(hoje.Year, hoje.Month));
+                        break;
+
+                    case PeriodoRelatorio.UltimoMes:
+                        dataInicio = new DateTime(hoje.Year, hoje.Month, 1).AddMonths(-1);
+                        dataFim = new DateTime(hoje.Year, hoje.Month, 1).AddDays(-1);
+                        break;
+
+                    case PeriodoRelatorio.UltimoSemestre:
+                        int semestreAtual = (hoje.Month - 1) / 6 + 1;
+                        if (semestreAtual == 1)
+                        {
+                            dataInicio = new DateTime(hoje.Year - 1, 7, 1);
+                            dataFim = new DateTime(hoje.Year - 1, 12, 31);
+                        }
+                        else
+                        {
+                            dataInicio = new DateTime(hoje.Year, 1, 1);
+                            dataFim = new DateTime(hoje.Year, 6, 30);
+                        }
+                        break;
+
+                    case PeriodoRelatorio.UltimoAno:
+                        dataInicio = new DateTime(hoje.Year - 1, 1, 1);
+                        dataFim = new DateTime(hoje.Year - 1, 12, 31);
+                        break;
+
+                    case PeriodoRelatorio.Todos:
+                    case PeriodoRelatorio.Personalizado:
+                    default:
+                        dataInicio = null;
+                        dataFim = null;
+                        break;
+                }
+            }
+
             var todasPaginas = await _repo.ListarTodasAsync();
 
             // Filtro base: apenas páginas principais e ativas

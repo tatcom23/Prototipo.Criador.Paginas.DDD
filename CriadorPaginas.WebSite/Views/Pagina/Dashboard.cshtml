@@ -1,7 +1,9 @@
-﻿@model Paginas.Application.DTOs.DashboardViewModel
+﻿@using Paginas.Domain.Enums
+@model Paginas.Application.DTOs.DashboardViewModel
 @{
     ViewData["Title"] = "Dashboard de Páginas";
 }
+
 <div class="container mt-4">
     <!-- 🔹 FILTRO DE PERÍODO -->
     <div class="p-4 mb-4 border rounded-3 shadow-sm bg-light">
@@ -12,15 +14,44 @@
                 <label for="periodo" class="form-label fw-semibold text-secondary mb-2">
                     📅 Período do Relatório
                 </label>
-                <select id="periodo" name="periodo" class="form-select form-select-sm"
-                        onchange="toggleDatas()">
-                    <option value="mesAtual">Mês Atual</option>
-                    <option value="ultimoMes">Último mês</option>
-                    <option value="ultimoTrimestre">Último trimestre</option>
-                    <option value="ultimoSemestre">Último semestre</option>
-                    <option value="ultimoAno">Último ano</option>
-                    <option value="todos">Todas</option>
-                    <option value="personalizado">Personalizado</option>
+                <select id="periodo" name="periodo" class="form-select form-select-sm" onchange="toggleDatas()">
+                    @foreach (var op in Enum.GetValues(typeof(Paginas.Domain.Enums.PeriodoRelatorio)).Cast<Paginas.Domain.Enums.PeriodoRelatorio>())
+                    {
+                        var texto = "";
+                        switch (op)
+                        {
+                            case Paginas.Domain.Enums.PeriodoRelatorio.MesAtual:
+                                texto = "Mês Atual";
+                                break;
+                            case Paginas.Domain.Enums.PeriodoRelatorio.UltimoMes:
+                                texto = "Último Mês";
+                                break;
+                            case Paginas.Domain.Enums.PeriodoRelatorio.UltimoSemestre:
+                                texto = "Último Semestre";
+                                break;
+                            case Paginas.Domain.Enums.PeriodoRelatorio.UltimoAno:
+                                texto = "Último Ano";
+                                break;
+                            case Paginas.Domain.Enums.PeriodoRelatorio.Todos:
+                                texto = "Todas";
+                                break;
+                            case Paginas.Domain.Enums.PeriodoRelatorio.Personalizado:
+                                texto = "Personalizado";
+                                break;
+                        }
+
+                        var isSelected = ViewBag.PeriodoSelecionado == op.ToString();
+
+                        // ✅ O Razor só lê atributos fixos, então fazemos o if separado
+                        if (isSelected)
+                        {
+                            <option value="@op.ToString()" selected>@texto</option>
+                        }
+                        else
+                        {
+                            <option value="@op.ToString()">@texto</option>
+                        }
+                    }
                 </select>
             </div>
             <!-- Datas personalizadas (inicialmente ocultas) -->
@@ -112,54 +143,58 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        // Função para toggle das datas personalizadas
         function toggleDatas() {
             const select = document.getElementById("periodo");
             const datas = document.getElementById("datasPersonalizadas");
-            if (select.value === "personalizado") {
+            const valor = select.value.toLowerCase(); // converte para minúsculas para evitar erro
+            if (valor === "personalizado") {
                 datas.classList.remove("d-none");
                 datas.classList.add("fade-in");
             } else {
                 datas.classList.add("d-none");
                 datas.classList.remove("fade-in");
-                // Limpa os campos de data se não for personalizado
                 document.getElementById("dataInicio").value = "";
                 document.getElementById("dataFim").value = "";
             }
         }
 
+        // ✅ Executa ao carregar a página (para manter estado após postback)
+        document.addEventListener("DOMContentLoaded", function () {
+            toggleDatas();
+        });
+
         // Renderiza o gráfico somente se o modelo estiver preenchido
         @if (Model != null && Model.Grafico.Any())
         {
-                @:const ctx = document.getElementById('graficoPaginas').getContext('2d');
-                @:const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.MesAno)));
-                @:const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.Quantidade)));
-                @:const chart = new Chart(ctx, {
-                @:    type: 'bar',
-                @:    data: {
-                @:        labels: labels,
-                @:        datasets: [{
-                @:            label: 'Páginas Criadas',
-                @:            data: data,
-                @:            borderWidth: 1,
-                @:            backgroundColor: '#007bff'
-                @:        }]
-                @:    },
-                @:    options: {
-                @:        responsive: true,
-                @:        scales: {
-                @:            y: {
-                @:                beginAtZero: true,
-                @:                ticks: { precision: 0 }
-                @:            }
-                @:        }
-                @:    }
-                @:});
-                // Converter gráfico em Base64 antes de enviar
-                @:document.getElementById('pdfForm').addEventListener('submit', function (e) {
-                @:    const graficoImg = chart.toBase64Image();
-                @:    document.getElementById('graficoBase64').value = graficoImg;
-                @:});
+                    @:const ctx = document.getElementById('graficoPaginas').getContext('2d');
+                    @:const labels = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.MesAno)));
+                    @:const data = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Grafico.Select(g => g.Quantidade)));
+                    @:const chart = new Chart(ctx, {
+                    @:    type: 'bar',
+                    @:    data: {
+                    @:        labels: labels,
+                    @:        datasets: [{
+                    @:            label: 'Páginas Criadas',
+                    @:            data: data,
+                    @:            borderWidth: 1,
+                    @:            backgroundColor: '#007bff'
+                    @:        }]
+                    @:    },
+                    @:    options: {
+                    @:        responsive: true,
+                    @:        scales: {
+                    @:            y: {
+                    @:                beginAtZero: true,
+                    @:                ticks: { precision: 0 }
+                    @:            }
+                    @:        }
+                    @:    }
+                    @:});
+                    // Converter gráfico em Base64 antes de enviar
+                    @:document.getElementById('pdfForm').addEventListener('submit', function (e) {
+                    @:    const graficoImg = chart.toBase64Image();
+                    @:    document.getElementById('graficoBase64').value = graficoImg;
+                    @:});
         }
     </script>
 }

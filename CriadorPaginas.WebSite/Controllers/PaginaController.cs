@@ -341,61 +341,29 @@ namespace Paginas.Web.Controllers
                 .Trim('-');
         }
 
-        public async Task<IActionResult> Dashboard(string periodo, DateTime? dataInicio, DateTime? dataFim)
+        public async Task<IActionResult> Dashboard(string periodo = null, DateTime? dataInicio = null, DateTime? dataFim = null)
         {
-            DateTime inicio = DateTime.MinValue;
-            DateTime fim = DateTime.Now;
+            // Permite ignorar diferença de maiúsculas/minúsculas
+            PeriodoRelatorio periodoEnum;
+            if (!Enum.TryParse(periodo, ignoreCase: true, out periodoEnum))
+            {
+                periodoEnum = PeriodoRelatorio.MesAtual;
+            }
 
-            // Se não houver parâmetros, retorna modelo vazio
+            // Se nenhum período for informado, apenas renderiza a view sem relatório
             if (string.IsNullOrEmpty(periodo) && !dataInicio.HasValue && !dataFim.HasValue)
             {
-                return View(new Paginas.Application.DTOs.DashboardViewModel());
+                ViewBag.PeriodoSelecionado = periodoEnum.ToString();
+                return View(null);
             }
 
-            switch (periodo)
-            {
-                case "mesAtual":
-                    inicio = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                    fim = DateTime.Now;
-                    break;
-                case "ultimoMes":
-                    inicio = new DateTime(DateTime.Now.AddMonths(-1).Year, DateTime.Now.AddMonths(-1).Month, 1);
-                    fim = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1).AddDays(-1);
-                    break;
-                case "ultimoTrimestre":
-                    int currentQuarter = (DateTime.Now.Month - 1) / 3; // 0 a 3 (janeiro-março, abril-junho, julho-setembro, outubro-dezembro)
-                    int previousQuarterStartMonth = (currentQuarter == 0 ? 9 : (currentQuarter - 1) * 3 + 1); // Retrocede ao trimestre anterior
-                    int previousQuarterYear = DateTime.Now.Year;
-                    if (previousQuarterStartMonth > DateTime.Now.Month) previousQuarterYear--; // Ajuste de ano se necessário
-                    inicio = new DateTime(previousQuarterYear, previousQuarterStartMonth, 1);
-                    fim = inicio.AddMonths(3).AddDays(-1); // Último dia do trimestre anterior
-                    break;
-                case "ultimoSemestre":
-                    int mesesSemestre = (DateTime.Now.Month - 1) / 6 * 6;
-                    inicio = new DateTime(DateTime.Now.AddMonths(-6).Year, mesesSemestre + 1, 1);
-                    fim = new DateTime(DateTime.Now.Year, mesesSemestre + 1, 1).AddMonths(6).AddDays(-1);
-                    break;
-                case "ultimoAno":
-                    inicio = new DateTime(DateTime.Now.AddYears(-1).Year, 1, 1);
-                    fim = new DateTime(DateTime.Now.Year, 1, 1).AddYears(1).AddDays(-1);
-                    break;
-                case "personalizado":
-                    if (dataInicio.HasValue && dataFim.HasValue)
-                    {
-                        inicio = dataInicio.Value;
-                        fim = dataFim.Value;
-                    }
-                    break;
-                case "todos":
-                default:
-                    inicio = DateTime.MinValue;
-                    fim = DateTime.Now;
-                    break;
-            }
+            // Busca os dados com base no período selecionado
+            var dashboardDto = await _paginaService.ObterDadosDashboardAsync(dataInicio, dataFim, periodoEnum);
 
-            var dados = await _paginaService.ObterDadosDashboardAsync(inicio, fim);
-            return View(dados);
+            ViewBag.PeriodoSelecionado = periodoEnum.ToString();
+            return View(dashboardDto);
         }
+
 
         [HttpPost]
         public async Task<IActionResult> DashboardPdf(string graficoBase64)

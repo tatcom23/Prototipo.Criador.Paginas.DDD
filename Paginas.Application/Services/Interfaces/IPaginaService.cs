@@ -1,4 +1,5 @@
 ﻿using Paginas.Application.DTOs;
+using Paginas.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ namespace Paginas.Application.Services.Interfaces
 
         // Atualizar ordem entre duas páginas por id (não expõe entidades)
         Task AtualizarOrdemAsync(int idA, int idB);
-        Task<DashboardViewModel> ObterDadosDashboardAsync(DateTime? dataInicio = null, DateTime? dataFim = null);
+        Task<DashboardViewModel> ObterDadosDashboardAsync(DateTime? dataInicio = null, DateTime? dataFim = null, PeriodoRelatorio? periodo = null);
 
     }
 }
