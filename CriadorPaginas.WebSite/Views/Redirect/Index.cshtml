@@ -1,0 +1,122 @@
+﻿@model IEnumerable<Redirect.Application.DTOs.RedirectURLDTO>
+
+@{
+    ViewData["Title"] = "Lista de Redirecionamentos";
+}
+
+<!-- 🔹 FONT AWESOME CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+<div class="d-flex min-vh-100 bg-body-tertiary">
+    <!-- 🔹 CONTEÚDO PRINCIPAL -->
+    <main class="flex-grow-1 p-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+            <h2 class="fw-semibold text-dark mb-0">
+                <i class="fa-solid fa-right-left text-primary me-2"></i> Lista de Redirecionamentos
+            </h2>
+            <a href="@Url.Action("Create")" class="btn btn-success shadow-sm d-flex align-items-center gap-2">
+                <i class="fa-solid fa-circle-plus mx-1"></i>Novo
+            </a>
+        </div>
+
+        <!-- 🔹 LISTAGEM -->
+        @if (Model?.Any() == true)
+        {
+            <div class="table-responsive shadow-sm rounded-3">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-secondary small">
+                        <tr>
+                            <th>Data de Inserção</th>
+                            <th>Última Atualização</th>
+                            <th>URL Antiga</th>
+                            <th>URL Nova</th>
+                            <th>Status</th>
+                            <th class="text-center">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.OrderByDescending(m => m.DtRedirectUrl))
+                        {
+                            <tr>
+                                <td>@item.DtRedirectUrl?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>@item.DtAtualizacao?.ToString("dd/MM/yyyy HH:mm")</td>
+                                <td>
+                                    <code class="text-danger small">@item.UrlAntiga</code>
+                                </td>
+                                <td>
+                                    <code class="text-success small">@item.UrlNova</code>
+                                </td>
+                                <td>
+                                    @if (item.Ativo)
+                                    {
+                                        <span class="badge bg-success">Ativo</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">Inativo</span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <a href="@Url.Action("Edit", new { id = item.Codigo })"
+                                           class="btn btn-warning btn-sm shadow-sm d-flex align-items-center gap-1 mx-1">
+                                            <i class="fa-solid fa-pen mx-1"></i>
+                                        </a>
+                                        <a href="@Url.Action("Delete", new { id = item.Codigo })"
+                                           class="btn btn-danger btn-sm shadow-sm d-flex align-items-center gap-1 mx-1">
+                                            <i class="fa-solid fa-trash mx-1"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-secondary text-center mt-4 shadow-sm">
+                Nenhum redirecionamento cadastrado.
+            </div>
+        }
+    </main>
+</div>
+
+<!-- 🔹 ESTILO -->
+<style>
+    body {
+        background-color: #f6f8fa;
+    }
+
+    .hover-bright:hover {
+        filter: brightness(1.05);
+    }
+
+    table.table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease-in-out;
+    }
+
+    th {
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 0.8rem;
+    }
+
+    code {
+        font-family: 'Consolas', monospace;
+    }
+
+    .btn {
+        transition: all 0.2s ease-in-out;
+    }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+    .d-flex.gap-2 a {
+        margin-bottom: 0.25rem;
+    }
+</style>

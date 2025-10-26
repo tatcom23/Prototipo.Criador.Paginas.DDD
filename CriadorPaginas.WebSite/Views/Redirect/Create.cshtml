@@ -1,0 +1,34 @@
+﻿@model Redirect.Application.DTOs.RedirectURLDTO
+
+<div class="container mt-5">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white text-center text-uppercase fw-bold">
+            <h4 class="mb-0">Adicionar Redirecionamento</h4>
+        </div>
+        <div class="card-body">
+            <form asp-action="Create" method="post">
+                <div class="mb-3">
+                    <label asp-for="UrlAntiga" class="form-label fw-semibold">URL Antiga</label>
+                    <input asp-for="UrlAntiga" class="form-control" placeholder="/pagina-antiga" />
+                    <span asp-validation-for="UrlAntiga" class="text-danger"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="UrlNova" class="form-label fw-semibold">URL Nova</label>
+                    <input asp-for="UrlNova" class="form-control" placeholder="/nova-pagina" />
+                    <span asp-validation-for="UrlNova" class="text-danger"></span>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2 mt-4">
+                    <a asp-action="Index" class="btn btn-outline-secondary px-4 mx-1">Cancelar</a>
+                    <button type="submit" class="btn btn-primary px-4 mx-1">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<style>
+    h4 {
+        color: #fff !important;
+    }
+</style>

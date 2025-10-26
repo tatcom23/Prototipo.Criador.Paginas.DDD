@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Paginas.Infrastructure.IoC; 
+using Paginas.Infrastructure.IoC;
+using Redirect.Infrastructure.IoC;
+using Redirect.API.Middleware;
 
 namespace CriadorPaginas.WebSite
 {
@@ -21,6 +23,7 @@ namespace CriadorPaginas.WebSite
         {
             services.AddControllersWithViews();
             services.AddInfrastructurePaginas(Configuration);
+            services.AddInfrastructureRedirect(Configuration);
         }
 
         // 2) Pipeline HTTP
@@ -42,6 +45,8 @@ namespace CriadorPaginas.WebSite
             app.UseRouting();
 
             app.UseAuthorization();
+
+            app.UseMiddleware<RedirectMiddleware>();
 
             app.UseEndpoints(endpoints =>
             {

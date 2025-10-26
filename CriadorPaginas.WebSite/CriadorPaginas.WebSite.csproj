@@ -29,6 +29,7 @@
     <ProjectReference Include="..\Paginas.Application\Paginas.Application.csproj" />
     <ProjectReference Include="..\Paginas.Domain\Paginas.Domain.csproj" />
     <ProjectReference Include="..\Paginas.Infrastructure\Paginas.Infrastructure.csproj" />
+    <ProjectReference Include="..\Redirect.Infrastructure\Redirect.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
