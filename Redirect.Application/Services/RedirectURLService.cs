@@ -67,7 +67,7 @@ namespace Redirect.Application.Services
             // Atualiza apenas os campos editáveis
             entityExistente.UrlAntiga = dto.UrlAntiga;
             entityExistente.UrlNova = dto.UrlNova;
-            entityExistente.Ativo = dto.Ativo;
+            entityExistente.Ativo = true;
 
             await _repository.AtualizarAsync(entityExistente);
         }

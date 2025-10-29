@@ -44,9 +44,9 @@ namespace CriadorPaginas.WebSite
 
             app.UseRouting();
 
-            app.UseAuthorization();
-
             app.UseMiddleware<RedirectMiddleware>();
+
+            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
