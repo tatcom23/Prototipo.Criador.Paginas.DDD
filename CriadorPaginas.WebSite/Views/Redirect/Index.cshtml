@@ -27,7 +27,7 @@
                     <thead class="table-light text-secondary small">
                         <tr>
                             <th>Data de Inserção</th>
-                            <th>Última Atualização</th>
+                            <th>Período Ativo</th>
                             <th>URL Antiga</th>
                             <th>URL Nova</th>
                             <th>Status</th>
@@ -39,7 +39,29 @@
                         {
                             <tr>
                                 <td>@item.DtRedirectUrl?.ToString("dd/MM/yyyy HH:mm")</td>
-                                <td>@item.DtAtualizacao?.ToString("dd/MM/yyyy HH:mm")</td>
+
+                                <td>
+                                    @if (item.DtInicial != null || item.DtFinal != null)
+                                    {
+                                        <div class="small text-muted">
+                                            @if (item.DtInicial != null)
+                                            {
+                                                <span><strong>Início:</strong> @item.DtInicial?.ToString("dd/MM/yyyy")</span>
+                                
+                                                <br />
+                                            }
+                                            @if (item.DtFinal != null)
+                                            {
+                                                <span><strong>Fim:</strong> @item.DtFinal?.ToString("dd/MM/yyyy")</span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-secondary small fst-italic">Sem período definido</span>
+                                    }
+                                </td>
+
                                 <td>
                                     <code class="text-danger small">@item.UrlAntiga</code>
                                 </td>
@@ -87,10 +109,6 @@
 <style>
     body {
         background-color: #f6f8fa;
-    }
-
-    .hover-bright:hover {
-        filter: brightness(1.05);
     }
 
     table.table-hover tbody tr:hover {

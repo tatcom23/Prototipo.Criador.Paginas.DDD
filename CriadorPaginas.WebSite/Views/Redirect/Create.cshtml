@@ -5,20 +5,46 @@
         <div class="card-header bg-primary text-white text-center fw-bold">
             <h4 class="mb-0">Adicionar Redirecionamento</h4>
         </div>
+
         <div class="card-body">
             <form asp-action="Create" method="post">
+                <!-- URL Antiga -->
                 <div class="mb-3">
                     <label asp-for="UrlAntiga" class="form-label fw-semibold">URL Antiga</label>
                     <input asp-for="UrlAntiga" class="form-control" placeholder="/pagina-antiga" />
                     <span asp-validation-for="UrlAntiga" class="text-danger"></span>
                 </div>
 
+                <!-- URL Nova -->
                 <div class="mb-3">
                     <label asp-for="UrlNova" class="form-label fw-semibold">URL Nova</label>
                     <input asp-for="UrlNova" class="form-control" placeholder="/nova-pagina" />
                     <span asp-validation-for="UrlNova" class="text-danger"></span>
                 </div>
 
+                <!-- Opção de Selecionar Período -->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="chkPeriodo">
+                    <label class="form-check-label fw-semibold" for="chkPeriodo">
+                        Selecionar período
+                    </label>
+                </div>
+
+                <!-- Campos de Data (início e fim) -->
+                <div id="periodoCampos" class="row g-3" style="display: none;">
+                    <div class="col-md-6">
+                        <label asp-for="DtInicial" class="form-label fw-semibold">Data de Início</label>
+                        <input asp-for="DtInicial" type="datetime-local" class="form-control" />
+                        <span asp-validation-for="DtInicial" class="text-danger"></span>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DtFinal" class="form-label fw-semibold">Data de Fim (opcional)</label>
+                        <input asp-for="DtFinal" type="datetime-local" class="form-control" />
+                        <span asp-validation-for="DtFinal" class="text-danger"></span>
+                    </div>
+                </div>
+
+                <!-- Botões -->
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a asp-action="Index" class="btn btn-outline-secondary px-4 mx-1">Cancelar</a>
                     <button type="submit" class="btn btn-primary px-4 mx-1">Salvar</button>
@@ -27,8 +53,29 @@
         </div>
     </div>
 </div>
+
 <style>
     h4 {
         color: #fff !important;
     }
+
+    label {
+        color: #333;
+    }
+
+    .form-check-label {
+        cursor: pointer;
+    }
 </style>
+
+<script>
+    // Exibe ou oculta os campos de data conforme o checkbox
+    document.addEventListener("DOMContentLoaded", function () {
+        const chkPeriodo = document.getElementById("chkPeriodo");
+        const periodoCampos = document.getElementById("periodoCampos");
+
+        chkPeriodo.addEventListener("change", function () {
+            periodoCampos.style.display = this.checked ? "flex" : "none";
+        });
+    });
+</script>

@@ -14,5 +14,7 @@ namespace Redirect.Domain.Entities
         public bool Ativo { get; set; } = true;
         public DateTime? DtRedirectUrl { get; set; }
         public DateTime? DtAtualizacao { get; set; }
+        public DateTime? DtInicial { get; set; }
+        public DateTime? DtFinal { get; set; }
     }
 }

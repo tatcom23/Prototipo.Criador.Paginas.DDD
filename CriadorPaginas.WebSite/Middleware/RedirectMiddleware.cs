@@ -16,7 +16,7 @@ namespace Redirect.API.Middleware
 
         public async Task InvokeAsync(HttpContext context, IRedirectURLService redirectService)
         {
-            // 🔹 Adiciona cabeçalhos HTTP para evitar cache em todas as respostas
+            // 🔹 Cabeçalhos para evitar cache
             context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
             context.Response.Headers["Pragma"] = "no-cache";
             context.Response.Headers["Expires"] = "0";
@@ -29,19 +29,26 @@ namespace Redirect.API.Middleware
 
             if (redirect != null && redirect.Ativo)
             {
-                // 🔹 Cria a URL de destino garantindo que o cache seja sempre ignorado
-                var novaUrl = redirect.UrlNova;
+                // 🔹 Verifica se há data de início e fim definidas no registro
+                var agora = DateTime.Now;
+                var inicio = redirect.DtInicial; // Ex: DateTime?
+                var fim = redirect.DtFinal;       // Ex: DateTime?
 
-                // Adiciona um parâmetro nocache com timestamp para forçar nova requisição
-                var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                if (!novaUrl.Contains("?"))
-                    novaUrl += $"?nocache={timestamp}";
-                else
-                    novaUrl += $"&nocache={timestamp}";
+                // 🔹 Só redireciona se estiver dentro do intervalo de tempo
+                if ((!inicio.HasValue || agora >= inicio.Value) &&
+                    (!fim.HasValue || agora <= fim.Value))
+                {
+                    var novaUrl = redirect.UrlNova;
+                    var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
-                // 🔹 Redireciona temporariamente (não cacheia o redirecionamento)
-                context.Response.Redirect(novaUrl, permanent: false);
-                return;
+                    if (!novaUrl.Contains("?"))
+                        novaUrl += $"?nocache={timestamp}";
+                    else
+                        novaUrl += $"&nocache={timestamp}";
+
+                    context.Response.Redirect(novaUrl, permanent: false);
+                    return;
+                }
             }
 
             await _next(context);

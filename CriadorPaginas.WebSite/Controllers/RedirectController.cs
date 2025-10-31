@@ -36,8 +36,6 @@ namespace CriadorPaginas.WebSite.Controllers
         {
             if (ModelState.IsValid)
             {
-                dto.Ativo = true;
-
                 // 🔹 Normalização da URL
                 dto.UrlAntiga = NormalizeUrl(dto.UrlAntiga);
                 dto.UrlNova = NormalizeUrl(dto.UrlNova);

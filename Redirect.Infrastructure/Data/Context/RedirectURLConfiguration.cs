@@ -47,6 +47,16 @@ namespace Redirect.Infrastructure.Data.Configurations
                 .HasColumnType("datetime")
                 .IsRequired(false);
 
+            builder.Property(r => r.DtInicial)
+                .HasColumnName("dt_inicio_redirect_url")
+                .HasColumnType("datetime")
+                .IsRequired(false);
+
+            builder.Property(r => r.DtFinal)
+                .HasColumnName("dt_fim_redirect_url")
+                .HasColumnType("datetime")
+                .IsRequired(false);
+
             // 🔹 Índice único na URL antiga
             builder.HasIndex(r => r.UrlAntiga)
                    .IsUnique();

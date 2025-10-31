@@ -30,7 +30,9 @@ namespace Redirect.Application.Services
                 DtAtualizacao = entity.DtAtualizacao,
                 UrlAntiga = entity.UrlAntiga,
                 UrlNova = entity.UrlNova,
-                Ativo = entity.Ativo
+                Ativo = entity.Ativo,
+                DtInicial = entity.DtInicial,
+                DtFinal = entity.DtFinal
             };
         }
 
@@ -44,7 +46,9 @@ namespace Redirect.Application.Services
                 DtAtualizacao = r.DtAtualizacao,
                 UrlAntiga = r.UrlAntiga,
                 UrlNova = r.UrlNova,
-                Ativo = r.Ativo
+                Ativo = r.Ativo,
+                DtInicial = r.DtInicial,
+                DtFinal = r.DtFinal
             });
         }
 
@@ -54,7 +58,9 @@ namespace Redirect.Application.Services
             {
                 UrlAntiga = dto.UrlAntiga,
                 UrlNova = dto.UrlNova,
-                Ativo = dto.Ativo
+                Ativo = dto.Ativo,
+                DtInicial = dto.DtInicial,
+                DtFinal = dto.DtFinal
             };
             await _repository.AdicionarAsync(entity);
         }
@@ -68,6 +74,8 @@ namespace Redirect.Application.Services
             entityExistente.UrlAntiga = dto.UrlAntiga;
             entityExistente.UrlNova = dto.UrlNova;
             entityExistente.Ativo = true;
+            entityExistente.DtInicial = dto.DtInicial;
+            entityExistente.DtFinal = dto.DtFinal;
 
             await _repository.AtualizarAsync(entityExistente);
         }
