@@ -6,16 +6,16 @@ namespace Redirect.Infrastructure.Data.Context
 {
     public class AppDbContext : DbContext
     {
-        public DbSet<RedirectURL> RedirectURLs { get; set; }
-
         public AppDbContext(DbContextOptions<AppDbContext> options)
-            : base(options)
-        {
-        }
+            : base(options) { }
+
+        public DbSet<RedirecionamentoOrigem> RedirecionamentoOrigens { get; set; }
+        public DbSet<RedirecionamentoDestino> RedirecionamentoDestinos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
-            modelBuilder.ApplyConfiguration(new RedirectURLConfiguration());
+            modelBuilder.ApplyConfiguration(new RedirecionamentoOrigemConfiguration());
+            modelBuilder.ApplyConfiguration(new RedirecionamentoDestinoConfiguration());
             base.OnModelCreating(modelBuilder);
         }
     }

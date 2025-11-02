@@ -22,10 +22,12 @@ namespace Redirect.Infrastructure.IoC
             });
 
             // Repositórios
-            services.AddScoped<IRedirectURLRepository, RedirectURLRepository>();
-            
+            services.AddScoped<IRedirecionamentoOrigemRepository, RedirecionamentoOrigemRepository>();
+            services.AddScoped<IRedirecionamentoDestinoRepository, RedirecionamentoDestinoRepository>();
+
             // Serviços de aplicação
-            services.AddScoped<IRedirectURLService, RedirectURLService>();
+            services.AddScoped<IRedirecionamentoOrigemService, RedirecionamentoOrigemService>();
+            services.AddScoped<IRedirecionamentoDestinoService, RedirecionamentoDestinoService>();
 
             return services;
         }

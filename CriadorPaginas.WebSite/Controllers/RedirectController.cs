@@ -2,95 +2,175 @@
 using Redirect.Application.DTOs;
 using Redirect.Application.Services.Interfaces;
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace CriadorPaginas.WebSite.Controllers
 {
     public class RedirectController : Controller
     {
-        private readonly IRedirectURLService _redirectService;
+        private readonly IRedirecionamentoOrigemService _origemService;
+        private readonly IRedirecionamentoDestinoService _destinoService;
 
-        public RedirectController(IRedirectURLService redirectService)
+        public RedirectController(
+            IRedirecionamentoOrigemService origemService,
+            IRedirecionamentoDestinoService destinoService)
         {
-            _redirectService = redirectService;
+            _origemService = origemService;
+            _destinoService = destinoService;
         }
 
-        // GET: /Redirect
+        // 🔹 LISTAGEM DE ORIGENS
         public async Task<IActionResult> Index()
         {
-            var redirects = await _redirectService.ObterTodosAsync();
-            return View(redirects);
+            var origens = await _origemService.ObterTodosAsync();
+            return View(origens);
         }
 
-        // GET: /Redirect/Create
+        // 🔹 CRIAR NOVO
         public IActionResult Create()
         {
-            return View();
+            return View(new RedirecionamentoOrigemDTO());
         }
 
-        // POST: /Redirect/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(RedirectURLDTO dto)
+        public async Task<IActionResult> Create(RedirecionamentoOrigemDTO dto)
         {
-            if (ModelState.IsValid)
-            {
-                // 🔹 Normalização da URL
-                dto.UrlAntiga = NormalizeUrl(dto.UrlAntiga);
-                dto.UrlNova = NormalizeUrl(dto.UrlNova);
+            if (!ModelState.IsValid)
+                return View(dto);
 
-                await _redirectService.AdicionarAsync(dto);
-                return RedirectToAction(nameof(Index));
-            }
-            return View(dto);
-        }
+            dto.UrlOrigem = NormalizeUrl(dto.UrlOrigem);
+            dto.DtRedirecionamento = DateTime.Now;
 
-        // GET: /Redirect/Edit/5
-        public async Task<IActionResult> Edit(int id)
-        {
-            var redirects = await _redirectService.ObterTodosAsync();
-            var dto = redirects.FirstOrDefault(r => r.Codigo == id);
-            if (dto == null) return NotFound();
-            return View(dto);
-        }
-
-        // POST: /Redirect/Edit/5
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(RedirectURLDTO dto)
-        {
-            if (ModelState.IsValid)
-            {
-                // 🔹 Normalização da URL também ao editar
-                dto.UrlAntiga = NormalizeUrl(dto.UrlAntiga);
-                dto.UrlNova = NormalizeUrl(dto.UrlNova);
-
-                await _redirectService.AtualizarAsync(dto);
-                return RedirectToAction(nameof(Index));
-            }
-            return View(dto);
-        }
-
-        // GET: /Redirect/Delete/5
-        public async Task<IActionResult> Delete(int id)
-        {
-            await _redirectService.RemoverAsync(id);
+            await _origemService.AdicionarAsync(dto);
+            TempData["SuccessMessage"] = "Redirecionamento criado com sucesso.";
             return RedirectToAction(nameof(Index));
         }
 
-        // 🔹 Método auxiliar para normalizar URLs
+        // 🔹 EDITAR ORIGEM COMPLETA
+        public async Task<IActionResult> Edit(int id)
+        {
+            var dto = await _origemService.ObterPorIdAsync(id);
+            if (dto == null)
+                return NotFound();
+
+            return View(dto);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(RedirecionamentoOrigemDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            dto.UrlOrigem = NormalizeUrl(dto.UrlOrigem);
+            dto.DtAtualizacao = DateTime.Now;
+
+            await _origemService.AtualizarAsync(dto);
+            TempData["SuccessMessage"] = "Redirecionamento atualizado com sucesso.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // 🔹 EDITAR DESTINO INDIVIDUAL
+        public async Task<IActionResult> EditDestino(int id)
+        {
+            var destino = await _destinoService.ObterPorIdAsync(id);
+            if (destino == null)
+                return NotFound();
+
+            return View(destino); // View "EditDestino.cshtml"
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditDestino(RedirecionamentoDestinoDTO dto)
+        {
+            if (!ModelState.IsValid)
+                return View(dto);
+
+            await _destinoService.AtualizarAsync(dto);
+            TempData["SuccessMessage"] = "Destino atualizado com sucesso.";
+            return RedirectToAction(nameof(Index));
+        }
+
+        // 🔹 EXCLUIR ORIGEM (ETAPA 1 - CONFIRMAÇÃO)
+        public async Task<IActionResult> Delete(int id)
+        {
+            var dto = await _origemService.ObterPorIdAsync(id);
+            if (dto == null)
+                return NotFound();
+
+            return View("ConfirmDeleteOrigem", dto);
+        }
+
+        // 🔹 EXCLUIR ORIGEM (ETAPA 2 - CONFIRMADO)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            try
+            {
+                await _origemService.RemoverAsync(id);
+                TempData["SuccessMessage"] = "Origem e destinos excluídos com sucesso.";
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Erro ao excluir origem: {ex.Message}";
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        // 🔹 EXCLUIR DESTINO (ETAPA 1 - CONFIRMAÇÃO)
+        public async Task<IActionResult> DeleteDestino(int id)
+        {
+            var destino = await _destinoService.ObterPorIdAsync(id);
+            if (destino == null)
+                return NotFound();
+
+            return View("ConfirmDeleteDestino", destino);
+        }
+
+        // 🔹 EXCLUIR DESTINO (ETAPA 2 - CONFIRMADO)
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteDestinoConfirmed(int id)
+        {
+            try
+            {
+                var destino = await _destinoService.ObterPorIdAsync(id);
+                if (destino == null)
+                    return NotFound();
+
+                await _destinoService.RemoverAsync(id);
+                TempData["SuccessMessage"] = "Destino excluído com sucesso.";
+
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Erro ao excluir destino: {ex.Message}";
+                return RedirectToAction(nameof(Index));
+            }
+        }
+
+        // 🔹 Normaliza URLs
         private string NormalizeUrl(string url)
         {
             if (string.IsNullOrWhiteSpace(url))
                 return string.Empty;
 
-            // Remove domínio se existir e mantém apenas o caminho
-            var uri = new Uri(url, UriKind.RelativeOrAbsolute);
-            var path = uri.IsAbsoluteUri ? uri.AbsolutePath : url;
-
-            // Remove barra no final e converte para minúsculas
-            return path.TrimEnd('/').ToLower();
+            try
+            {
+                var uri = new Uri(url, UriKind.RelativeOrAbsolute);
+                var path = uri.IsAbsoluteUri ? uri.AbsolutePath : url;
+                return path.TrimEnd('/').ToLowerInvariant();
+            }
+            catch
+            {
+                return url.TrimEnd('/').ToLowerInvariant();
+            }
         }
     }
 }

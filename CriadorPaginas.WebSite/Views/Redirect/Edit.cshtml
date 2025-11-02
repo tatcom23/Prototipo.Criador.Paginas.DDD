@@ -1,4 +1,4 @@
-﻿@model Redirect.Application.DTOs.RedirectURLDTO
+﻿@model Redirect.Application.DTOs.RedirecionamentoOrigemDTO
 
 <div class="container mt-5">
     <div class="card shadow-sm border-0">
@@ -10,45 +10,72 @@
             <form asp-action="Edit" method="post">
                 <input type="hidden" asp-for="Codigo" />
 
-                <!-- URL Antiga -->
+                <!-- URL de Origem -->
                 <div class="mb-3">
-                    <label asp-for="UrlAntiga" class="form-label fw-semibold">URL Antiga</label>
-                    <input asp-for="UrlAntiga" class="form-control" placeholder="/pagina-antiga" />
-                    <span asp-validation-for="UrlAntiga" class="text-danger"></span>
+                    <label asp-for="UrlOrigem" class="form-label fw-semibold">URL de Origem</label>
+                    <input asp-for="UrlOrigem" class="form-control" placeholder="/pagina-origem" />
+                    <span asp-validation-for="UrlOrigem" class="text-danger"></span>
                 </div>
 
-                <!-- URL Nova -->
-                <div class="mb-3">
-                    <label asp-for="UrlNova" class="form-label fw-semibold">URL Nova</label>
-                    <input asp-for="UrlNova" class="form-control" placeholder="/nova-pagina" />
-                    <span asp-validation-for="UrlNova" class="text-danger"></span>
+                <!-- Lista de Destinos -->
+                <div id="destinosContainer">
+                    <h5 class="fw-bold mb-3 text-secondary">Destinos</h5>
+
+                    @if (Model.Destinos != null && Model.Destinos.Any())
+                    {
+                        var index = 0;
+                        foreach (var destino in Model.Destinos)
+                        {
+                            <div class="destino border rounded p-3 mb-3 bg-light">
+                                <input type="hidden" name="Destinos[@index].Codigo" value="@destino.Codigo" />
+                                <input type="hidden" name="Destinos[@index].RedirecionamentoOrigemId" value="@destino.RedirecionamentoOrigemId" />
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">URL de Destino</label>
+                                    <input name="Destinos[@index].UrlDestino" class="form-control"
+                                           value="@destino.UrlDestino" placeholder="/pagina-destino" required />
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Data Inicial</label>
+                                        <input name="Destinos[@index].DtInicial" type="datetime-local"
+                                               class="form-control"
+                                               value="@(destino.DtInicial.HasValue? destino.DtInicial.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Data Final</label>
+                                        <input name="Destinos[@index].DtFinal" type="datetime-local"
+                                               class="form-control"
+                                               value="@(destino.DtFinal.HasValue? destino.DtFinal.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 d-flex justify-content-end gap-2">
+                                   <a href="@Url.Action("DeleteDestino", "Redirect", new { id = destino.Codigo })"
+                                       class="btn btn-danger btn-sm" title="Excluir Destino">
+                                        <i class="fa-solid fa-trash"></i> Excluir
+                                    </a>
+                                </div>
+                            </div>
+
+                            index++;
+                        }
+                    }
+                    else
+                    {
+                        <p class="text-muted">Nenhum destino cadastrado.</p>
+                    }
                 </div>
 
-                <!-- Checkbox para ativar o período -->
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="chkPeriodo" />
-                    <label class="form-check-label fw-semibold" for="chkPeriodo">
-                        Selecionar período
-                    </label>
+                <!-- Botão adicionar destino -->
+                <div class="text-end mb-4">
+                    <button type="button" id="addDestino" class="btn btn-outline-primary btn-sm">
+                        + Adicionar novo destino
+                    </button>
                 </div>
 
-                <!-- Campos de período -->
-                <div id="periodoCampos" class="row g-3" style="display: none;">
-                    <div class="col-md-6">
-                        <label asp-for="DtInicial" class="form-label fw-semibold">Data de Início</label>
-                        <input asp-for="DtInicial" type="datetime-local" class="form-control"
-                               value="@(Model.DtInicial.HasValue? Model.DtInicial.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
-                        <span asp-validation-for="DtInicial" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="DtFinal" class="form-label fw-semibold">Data de Fim (opcional)</label>
-                        <input asp-for="DtFinal" type="datetime-local" class="form-control"
-                               value="@(Model.DtFinal.HasValue? Model.DtFinal.Value.ToString("yyyy-MM-ddTHH:mm") : string.Empty)" />
-                        <span asp-validation-for="DtFinal" class="text-danger"></span>
-                    </div>
-                </div>
-
-                <!-- Botões -->
+                <!-- Botões principais -->
                 <div class="d-flex justify-content-end gap-2 mt-4">
                     <a asp-action="Index" class="btn btn-outline-secondary px-4 mx-1">Cancelar</a>
                     <button type="submit" class="btn btn-primary px-4 mx-1">Salvar Alterações</button>
@@ -67,26 +94,65 @@
         color: #333;
     }
 
-    .form-check-label {
-        cursor: pointer;
+    .destino {
+        position: relative;
+        transition: all 0.3s ease;
     }
+
+        .destino.removendo {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+        .destino .btn {
+            font-size: 0.85rem;
+        }
 </style>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        const chkPeriodo = document.getElementById("chkPeriodo");
-        const periodoCampos = document.getElementById("periodoCampos");
+        const container = document.getElementById("destinosContainer");
+        const addButton = document.getElementById("addDestino");
 
-        // Exibe automaticamente se já há datas preenchidas
-        const temPeriodo = "@(Model.DtInicial.HasValue || Model.DtFinal.HasValue)".toLowerCase() === "true";
-        if (temPeriodo) {
-            chkPeriodo.checked = true;
-            periodoCampos.style.display = "flex";
-        }
+        let destinoIndex = @Model.Destinos?.Count() ?? 0;
 
-        // Mostra/oculta conforme o usuário marca o checkbox
-        chkPeriodo.addEventListener("change", function () {
-            periodoCampos.style.display = this.checked ? "flex" : "none";
+        addButton.addEventListener("click", function () {
+            const newDestino = document.createElement("div");
+            newDestino.classList.add("destino", "border", "rounded", "p-3", "mb-3", "bg-light");
+
+            newDestino.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">URL de Destino</label>
+                    <input name="Destinos[${destinoIndex}].UrlDestino" class="form-control" placeholder="/nova-pagina" required />
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Data Inicial</label>
+                        <input name="Destinos[${destinoIndex}].DtInicial" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Data Final</label>
+                        <input name="Destinos[${destinoIndex}].DtFinal" type="datetime-local" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="mt-3 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm removeDestino">Remover</button>
+                </div>
+            `;
+
+            container.appendChild(newDestino);
+            destinoIndex++;
+        });
+
+        // Remove destino com animação
+        container.addEventListener("click", function (e) {
+            if (e.target.classList.contains("removeDestino")) {
+                const destino = e.target.closest(".destino");
+                destino.classList.add("removendo");
+                setTimeout(() => destino.remove(), 300);
+            }
         });
     });
 </script>

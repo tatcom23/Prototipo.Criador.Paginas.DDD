@@ -5,18 +5,17 @@ using System.Threading.Tasks;
 
 namespace Redirect.API.Middleware
 {
-    public class RedirectMiddleware
+    public class RedirecionamentoMiddleware
     {
         private readonly RequestDelegate _next;
 
-        public RedirectMiddleware(RequestDelegate next)
+        public RedirecionamentoMiddleware(RequestDelegate next)
         {
             _next = next;
         }
 
-        public async Task InvokeAsync(HttpContext context, IRedirectURLService redirectService)
+        public async Task InvokeAsync(HttpContext context, IRedirecionamentoOrigemService redirectService)
         {
-            // 🔹 Cabeçalhos para evitar cache
             context.Response.Headers["Cache-Control"] = "no-cache, no-store, must-revalidate";
             context.Response.Headers["Pragma"] = "no-cache";
             context.Response.Headers["Expires"] = "0";
@@ -25,20 +24,15 @@ namespace Redirect.API.Middleware
                              .TrimEnd('/')
                              .ToLower();
 
-            var redirect = await redirectService.ObterPorUrlAntigaAsync(urlAtual);
+            var origem = await redirectService.ObterPorUrlOrigemAsync(urlAtual);
 
-            if (redirect != null && redirect.Ativo)
+            if (origem != null && origem.Ativo)
             {
-                // 🔹 Verifica se há data de início e fim definidas no registro
-                var agora = DateTime.Now;
-                var inicio = redirect.DtInicial; // Ex: DateTime?
-                var fim = redirect.DtFinal;       // Ex: DateTime?
+                var destino = redirectService.SelecionarDestinoValido(origem);
 
-                // 🔹 Só redireciona se estiver dentro do intervalo de tempo
-                if ((!inicio.HasValue || agora >= inicio.Value) &&
-                    (!fim.HasValue || agora <= fim.Value))
+                if (destino != null)
                 {
-                    var novaUrl = redirect.UrlNova;
+                    var novaUrl = destino.UrlDestino;
                     var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
 
                     if (!novaUrl.Contains("?"))

@@ -1,0 +1,18 @@
+﻿@model Redirect.Application.DTOs.RedirecionamentoOrigemDTO
+@{
+    ViewData["Title"] = "Confirmar exclusão da origem";
+}
+
+<h3>Confirma a exclusão desta origem?</h3>
+
+<div class="alert alert-warning">
+    <p><strong>Origem:</strong> @Model.UrlOrigem</p>
+    <p>Todos os destinos relacionados serão removidos.</p>
+</div>
+
+<form asp-action="DeleteConfirmed" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Codigo" />
+    <button type="submit" class="btn btn-danger">Sim, excluir tudo</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

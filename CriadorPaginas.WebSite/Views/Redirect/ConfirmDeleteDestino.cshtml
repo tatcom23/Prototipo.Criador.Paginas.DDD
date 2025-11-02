@@ -1,0 +1,19 @@
+﻿@model Redirect.Application.DTOs.RedirecionamentoDestinoDTO
+@{
+    ViewData["Title"] = "Confirmar exclusão do destino";
+}
+
+<h3>Confirma a exclusão deste destino?</h3>
+
+<div class="alert alert-warning">
+    <p><strong>Destino:</strong> @Model.UrlDestino</p>
+    <p>Essa ação não pode ser desfeita.</p>
+</div>
+
+<form asp-action="DeleteDestinoConfirmed" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Codigo" />
+    <input type="hidden" name="origemId" value="@ViewBag.OrigemId" />
+    <button type="submit" class="btn btn-danger">Sim, excluir</button>
+    <a asp-action="Edit" asp-route-id="@ViewBag.OrigemId" class="btn btn-secondary">Cancelar</a>
+</form>

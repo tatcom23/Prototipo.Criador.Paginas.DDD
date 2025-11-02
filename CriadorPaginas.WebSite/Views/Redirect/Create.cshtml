@@ -1,4 +1,4 @@
-﻿@model Redirect.Application.DTOs.RedirectURLDTO
+﻿@model Redirect.Application.DTOs.RedirecionamentoOrigemDTO
 
 <div class="container mt-5">
     <div class="card shadow-sm border-0">
@@ -8,41 +8,22 @@
 
         <div class="card-body">
             <form asp-action="Create" method="post">
-                <!-- URL Antiga -->
+                <!-- URL de Origem -->
+                <div class="mb-4">
+                    <label asp-for="UrlOrigem" class="form-label fw-semibold">URL de Origem</label>
+                    <input asp-for="UrlOrigem" class="form-control" placeholder="página origem" />
+                    <span asp-validation-for="UrlOrigem" class="text-danger"></span>
+                </div>
+
+                <!-- Botão adicionar destino -->
                 <div class="mb-3">
-                    <label asp-for="UrlAntiga" class="form-label fw-semibold">URL Antiga</label>
-                    <input asp-for="UrlAntiga" class="form-control" placeholder="/pagina-antiga" />
-                    <span asp-validation-for="UrlAntiga" class="text-danger"></span>
+                    <button type="button" id="addDestino" class="btn btn-outline-primary btn-sm">
+                        + Adicionar Destino
+                    </button>
                 </div>
 
-                <!-- URL Nova -->
-                <div class="mb-3">
-                    <label asp-for="UrlNova" class="form-label fw-semibold">URL Nova</label>
-                    <input asp-for="UrlNova" class="form-control" placeholder="/nova-pagina" />
-                    <span asp-validation-for="UrlNova" class="text-danger"></span>
-                </div>
-
-                <!-- Opção de Selecionar Período -->
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="chkPeriodo">
-                    <label class="form-check-label fw-semibold" for="chkPeriodo">
-                        Selecionar período
-                    </label>
-                </div>
-
-                <!-- Campos de Data (início e fim) -->
-                <div id="periodoCampos" class="row g-3" style="display: none;">
-                    <div class="col-md-6">
-                        <label asp-for="DtInicial" class="form-label fw-semibold">Data de Início</label>
-                        <input asp-for="DtInicial" type="datetime-local" class="form-control" />
-                        <span asp-validation-for="DtInicial" class="text-danger"></span>
-                    </div>
-                    <div class="col-md-6">
-                        <label asp-for="DtFinal" class="form-label fw-semibold">Data de Fim (opcional)</label>
-                        <input asp-for="DtFinal" type="datetime-local" class="form-control" />
-                        <span asp-validation-for="DtFinal" class="text-danger"></span>
-                    </div>
-                </div>
+                <!-- Container de destinos -->
+                <div id="destinosContainer"></div>
 
                 <!-- Botões -->
                 <div class="d-flex justify-content-end gap-2 mt-4">
@@ -63,19 +44,88 @@
         color: #333;
     }
 
-    .form-check-label {
-        cursor: pointer;
+    .destino {
+        position: relative;
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: .5rem;
+        border: 1px solid #dee2e6;
+    }
+
+        .destino.removendo {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+
+    .periodo-container {
+        display: none;
+        margin-top: .5rem;
     }
 </style>
 
 <script>
-    // Exibe ou oculta os campos de data conforme o checkbox
     document.addEventListener("DOMContentLoaded", function () {
-        const chkPeriodo = document.getElementById("chkPeriodo");
-        const periodoCampos = document.getElementById("periodoCampos");
+        const container = document.getElementById("destinosContainer");
+        const addButton = document.getElementById("addDestino");
 
-        chkPeriodo.addEventListener("change", function () {
-            periodoCampos.style.display = this.checked ? "flex" : "none";
+        let destinoIndex = 0;
+
+        addButton.addEventListener("click", function () {
+            addDestino();
+        });
+
+        function addDestino() {
+            const newDestino = document.createElement("div");
+            newDestino.classList.add("destino");
+
+            newDestino.innerHTML = `
+                <div class="mb-2">
+                    <label class="form-label fw-semibold">URL de Destino</label>
+                    <input name="Destinos[${destinoIndex}].UrlDestino" class="form-control" placeholder="/nova-pagina" required />
+                </div>
+
+                <div class="form-check mb-2">
+                    <input class="form-check-input periodoCheck" type="checkbox" id="periodoCheck${destinoIndex}">
+                    <label class="form-check-label" for="periodoCheck${destinoIndex}">Definir período ativo</label>
+                </div>
+
+                <div class="row g-3 periodo-container" id="periodoContainer${destinoIndex}">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Data Inicial</label>
+                        <input name="Destinos[${destinoIndex}].DtInicial" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Data Final</label>
+                        <input name="Destinos[${destinoIndex}].DtFinal" type="datetime-local" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="mt-3 text-end">
+                    <button type="button" class="btn btn-outline-danger btn-sm removeDestino">Remover</button>
+                </div>
+            `;
+
+            container.appendChild(newDestino);
+
+            // Mostrar período apenas se o checkbox for marcado
+            const check = newDestino.querySelector(".periodoCheck");
+            const periodoDiv = newDestino.querySelector(".periodo-container");
+            check.addEventListener("change", function() {
+                periodoDiv.style.display = check.checked ? "flex" : "none";
+            });
+
+            destinoIndex++;
+        }
+
+        // Remover destino
+        container.addEventListener("click", function (e) {
+            if (e.target.classList.contains("removeDestino")) {
+                const destino = e.target.closest(".destino");
+                destino.classList.add("removendo");
+                setTimeout(() => destino.remove(), 300);
+            }
         });
     });
 </script>

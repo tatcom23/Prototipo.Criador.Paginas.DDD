@@ -1,0 +1,39 @@
+﻿@model Redirect.Application.DTOs.RedirecionamentoDestinoDTO
+
+<div class="container mt-5">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white text-center fw-bold">
+            <h4 class="mb-0 text-capitalize">Editar Destino</h4>
+        </div>
+
+        <div class="card-body">
+            <form asp-action="EditDestino" method="post">
+                <input type="hidden" asp-for="Codigo" />
+                <input type="hidden" asp-for="RedirecionamentoOrigemId" />
+
+                <div class="mb-4">
+                    <label asp-for="UrlDestino" class="form-label fw-semibold">URL de Destino</label>
+                    <input asp-for="UrlDestino" class="form-control" placeholder="/nova-pagina" />
+                    <span asp-validation-for="UrlDestino" class="text-danger"></span>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label asp-for="DtInicial" class="form-label fw-semibold">Data Inicial</label>
+                        <input asp-for="DtInicial" type="datetime-local" class="form-control" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="DtFinal" class="form-label fw-semibold">Data Final</label>
+                        <input asp-for="DtFinal" type="datetime-local" class="form-control" />
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end gap-2">
+                    <a asp-action="Edit" asp-route-id="@Model.RedirecionamentoOrigemId"
+                       class="btn btn-outline-secondary mx-1">Cancelar</a>
+                    <button type="submit" class="btn btn-primary mx-1">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
