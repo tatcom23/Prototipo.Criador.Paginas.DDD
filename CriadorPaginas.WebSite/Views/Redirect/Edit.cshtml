@@ -7,7 +7,10 @@
         </div>
 
         <div class="card-body">
-            <form asp-action="Edit" method="post">
+            <!-- ALERTA DE ERRO -->
+            <div id="alertaErro" class="alert alert-danger d-none" role="alert"></div>
+
+            <form asp-action="Edit" method="post" id="formRedirecionamento">
                 <input type="hidden" asp-for="Codigo" />
 
                 <!-- URL de Origem -->
@@ -19,7 +22,12 @@
 
                 <!-- Lista de Destinos -->
                 <div id="destinosContainer">
-                    <h5 class="fw-bold mb-3 text-secondary">Destinos</h5>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold text-secondary mb-0">Destinos</h5>
+                        <button type="button" id="addDestino" class="btn btn-outline-primary btn-sm">
+                            + Adicionar Destino
+                        </button>
+                    </div>
 
                     @if (Model.Destinos != null && Model.Destinos.Any())
                     {
@@ -36,7 +44,15 @@
                                            value="@destino.UrlDestino" placeholder="/pagina-destino" required />
                                 </div>
 
-                                <div class="row g-3">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input toggle-periodo" type="checkbox" id="periodoCheck_@index"
+                                           @(destino.DtInicial.HasValue ? "checked" : "")>
+                                    <label class="form-check-label fw-semibold" for="periodoCheck_@index">
+                                        Ativar período de validade
+                                    </label>
+                                </div>
+
+                                <div class="row g-3 periodo-datas @(destino.DtInicial.HasValue ? "" : "d-none")">
                                     <div class="col-md-6">
                                         <label class="form-label fw-semibold">Data Inicial</label>
                                         <input name="Destinos[@index].DtInicial" type="datetime-local"
@@ -52,7 +68,7 @@
                                 </div>
 
                                 <div class="mt-3 d-flex justify-content-end gap-2">
-                                   <a href="@Url.Action("DeleteDestino", "Redirect", new { id = destino.Codigo })"
+                                    <a href="@Url.Action("DeleteDestino", "Redirect", new { id = destino.Codigo })"
                                        class="btn btn-danger btn-sm" title="Excluir Destino">
                                         <i class="fa-solid fa-trash"></i> Excluir
                                     </a>
@@ -66,13 +82,6 @@
                     {
                         <p class="text-muted">Nenhum destino cadastrado.</p>
                     }
-                </div>
-
-                <!-- Botão adicionar destino -->
-                <div class="text-end mb-4">
-                    <button type="button" id="addDestino" class="btn btn-outline-primary btn-sm">
-                        + Adicionar novo destino
-                    </button>
                 </div>
 
                 <!-- Botões principais -->
@@ -95,7 +104,6 @@
     }
 
     .destino {
-        position: relative;
         transition: all 0.3s ease;
     }
 
@@ -104,18 +112,29 @@
             transform: translateX(-10px);
         }
 
-        .destino .btn {
-            font-size: 0.85rem;
-        }
+    .alert {
+        font-weight: 500;
+    }
 </style>
 
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const container = document.getElementById("destinosContainer");
         const addButton = document.getElementById("addDestino");
+        const alerta = document.getElementById("alertaErro");
+        const form = document.getElementById("formRedirecionamento");
 
         let destinoIndex = @Model.Destinos?.Count() ?? 0;
 
+        // alternar exibição das datas
+        container.addEventListener("change", function (e) {
+            if (e.target.classList.contains("toggle-periodo")) {
+                const datas = e.target.closest(".destino").querySelector(".periodo-datas");
+                datas.classList.toggle("d-none", !e.target.checked);
+            }
+        });
+
+        // adicionar destino
         addButton.addEventListener("click", function () {
             const newDestino = document.createElement("div");
             newDestino.classList.add("destino", "border", "rounded", "p-3", "mb-3", "bg-light");
@@ -126,7 +145,14 @@
                     <input name="Destinos[${destinoIndex}].UrlDestino" class="form-control" placeholder="/nova-pagina" required />
                 </div>
 
-                <div class="row g-3">
+                <div class="form-check mb-3">
+                    <input class="form-check-input toggle-periodo" type="checkbox" id="periodoCheck_new${destinoIndex}">
+                    <label class="form-check-label fw-semibold" for="periodoCheck_new${destinoIndex}">
+                        Ativar período de validade
+                    </label>
+                </div>
+
+                <div class="row g-3 periodo-datas d-none">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Data Inicial</label>
                         <input name="Destinos[${destinoIndex}].DtInicial" type="datetime-local" class="form-control" />
@@ -141,17 +167,56 @@
                     <button type="button" class="btn btn-outline-danger btn-sm removeDestino">Remover</button>
                 </div>
             `;
-
             container.appendChild(newDestino);
             destinoIndex++;
         });
 
-        // Remove destino com animação
+        // remover destino com animação
         container.addEventListener("click", function (e) {
             if (e.target.classList.contains("removeDestino")) {
                 const destino = e.target.closest(".destino");
                 destino.classList.add("removendo");
                 setTimeout(() => destino.remove(), 300);
+            }
+        });
+
+        // validação das datas antes de enviar
+        form.addEventListener("submit", function (e) {
+            const destinos = Array.from(container.querySelectorAll(".destino"));
+            let erro = "";
+
+            const datas = destinos.map(d => {
+                const dtIni = d.querySelector('input[name*="DtInicial"]').value;
+                const dtFim = d.querySelector('input[name*="DtFinal"]').value;
+                return { dtIni: dtIni ? new Date(dtIni) : null, dtFim: dtFim ? new Date(dtFim) : null };
+            });
+
+            // regra 1 - data final não pode ser antes da inicial
+            for (let i = 0; i < datas.length; i++) {
+                const { dtIni, dtFim } = datas[i];
+                if (dtIni && dtFim && dtFim < dtIni) {
+                    erro = `O destino ${i + 1} possui data final anterior à data inicial.`;
+                    break;
+                }
+            }
+
+            // regra 2 - sobreposição de períodos
+            if (!erro) {
+                const ativos = datas.filter(d => d.dtIni && d.dtFim).sort((a, b) => a.dtIni - b.dtIni);
+                for (let i = 0; i < ativos.length - 1; i++) {
+                    if (ativos[i + 1].dtIni < ativos[i].dtFim) {
+                        erro = "Os períodos de validade dos destinos não podem se sobrepor.";
+                        break;
+                    }
+                }
+            }
+
+            if (erro) {
+                e.preventDefault();
+                alerta.textContent = erro;
+                alerta.classList.remove("d-none");
+                alerta.scrollIntoView({ behavior: "smooth", block: "start" });
+                setTimeout(() => alerta.classList.add("d-none"), 6000);
             }
         });
     });

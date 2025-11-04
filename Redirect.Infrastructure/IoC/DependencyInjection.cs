@@ -27,7 +27,6 @@ namespace Redirect.Infrastructure.IoC
 
             // Serviços de aplicação
             services.AddScoped<IRedirecionamentoOrigemService, RedirecionamentoOrigemService>();
-            services.AddScoped<IRedirecionamentoDestinoService, RedirecionamentoDestinoService>();
 
             return services;
         }

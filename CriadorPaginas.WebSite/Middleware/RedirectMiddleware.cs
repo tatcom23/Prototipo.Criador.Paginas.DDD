@@ -21,6 +21,7 @@ namespace Redirect.API.Middleware
             context.Response.Headers["Expires"] = "0";
 
             var urlAtual = (context.Request.Path.Value ?? string.Empty)
+                             .Split('?')[0]
                              .TrimEnd('/')
                              .ToLower();
 
@@ -30,16 +31,29 @@ namespace Redirect.API.Middleware
             {
                 var destino = redirectService.SelecionarDestinoValido(origem);
 
-                if (destino != null)
+                if (destino != null && destino.Ativo)
                 {
-                    var novaUrl = destino.UrlDestino;
+                    var novaUrl = destino.UrlDestino?.TrimEnd('/').ToLower();
+                    if (string.IsNullOrWhiteSpace(novaUrl) &&
+                        !string.Equals(urlAtual, novaUrl, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _next(context);
+                        return;
+                    }
+
+                    // Evita loop
+                    if (string.Equals(urlAtual, novaUrl, StringComparison.OrdinalIgnoreCase))
+                    {
+                        await _next(context);
+                        return;
+                    }
+
                     var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+                    novaUrl += novaUrl.Contains("?")
+                        ? $"&nocache={timestamp}"
+                        : $"?nocache={timestamp}";
 
-                    if (!novaUrl.Contains("?"))
-                        novaUrl += $"?nocache={timestamp}";
-                    else
-                        novaUrl += $"&nocache={timestamp}";
-
+                    // Redireciona
                     context.Response.Redirect(novaUrl, permanent: false);
                     return;
                 }

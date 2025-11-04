@@ -105,23 +105,7 @@
                                         <span class="badge bg-secondary">Inativo</span>
                                     }
                                 </td>
-                                <td class="text-center">
-                                    <div class="d-flex justify-content-center gap-2">
-                                        <!-- Editar Destino -->
-                                        <a href="@Url.Action("EditDestino", "Redirect", new { id = destino.Codigo })"
-                                           class="btn btn-warning btn-sm shadow-sm mx-1"
-                                           title="Editar Destino">
-                                            <i class="fa-solid fa-pen"></i>
-                                        </a>
-
-                                        <!-- Excluir Destino -->
-                                        <a href="@Url.Action("DeleteDestino", "Redirect", new { id = destino.Codigo })"
-                                           class="btn btn-danger btn-sm shadow-sm mx-1"
-                                           title="Excluir Destino">
-                                            <i class="fa-solid fa-trash"></i>
-                                        </a>
-                                    </div>
-                                </td>
+                                <td colspan="2"></td>
                             </tr>
                         }
                     }

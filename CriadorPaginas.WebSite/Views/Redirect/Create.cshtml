@@ -7,6 +7,9 @@
         </div>
 
         <div class="card-body">
+            <!-- ⚠️ Alerta de validação -->
+            <div id="alertaValidacao" class="alert alert-danger d-none" role="alert"></div>
+
             <form asp-action="Create" method="post">
                 <!-- URL de Origem -->
                 <div class="mb-4">
@@ -16,7 +19,7 @@
                 </div>
 
                 <!-- Botão adicionar destino -->
-                <div class="mb-3">
+                <div class="mb-3 d-flex justify-content-end">
                     <button type="button" id="addDestino" class="btn btn-outline-primary btn-sm">
                         + Adicionar Destino
                     </button>
@@ -69,9 +72,12 @@
     document.addEventListener("DOMContentLoaded", function () {
         const container = document.getElementById("destinosContainer");
         const addButton = document.getElementById("addDestino");
+        const form = document.querySelector("form");
+        const alerta = document.getElementById("alertaValidacao");
 
         let destinoIndex = 0;
 
+        // ➕ Adicionar destino
         addButton.addEventListener("click", function () {
             addDestino();
         });
@@ -94,11 +100,11 @@
                 <div class="row g-3 periodo-container" id="periodoContainer${destinoIndex}">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Data Inicial</label>
-                        <input name="Destinos[${destinoIndex}].DtInicial" type="datetime-local" class="form-control" />
+                        <input name="Destinos[${destinoIndex}].DtInicial" type="datetime-local" class="form-control dt-inicial" />
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">Data Final</label>
-                        <input name="Destinos[${destinoIndex}].DtFinal" type="datetime-local" class="form-control" />
+                        <input name="Destinos[${destinoIndex}].DtFinal" type="datetime-local" class="form-control dt-final" />
                     </div>
                 </div>
 
@@ -112,19 +118,68 @@
             // Mostrar período apenas se o checkbox for marcado
             const check = newDestino.querySelector(".periodoCheck");
             const periodoDiv = newDestino.querySelector(".periodo-container");
-            check.addEventListener("change", function() {
+            check.addEventListener("change", function () {
                 periodoDiv.style.display = check.checked ? "flex" : "none";
             });
 
             destinoIndex++;
         }
 
-        // Remover destino
+        // ❌ Remover destino
         container.addEventListener("click", function (e) {
             if (e.target.classList.contains("removeDestino")) {
                 const destino = e.target.closest(".destino");
                 destino.classList.add("removendo");
                 setTimeout(() => destino.remove(), 300);
+            }
+        });
+
+        // ⚠️ Mostrar alerta
+        function mostrarAlerta(mensagem) {
+            alerta.textContent = mensagem;
+            alerta.classList.remove("d-none");
+            alerta.scrollIntoView({ behavior: "smooth", block: "center" });
+            setTimeout(() => alerta.classList.add("d-none"), 6000);
+        }
+
+        // ✅ Validação das datas antes de salvar
+        form.addEventListener("submit", function (e) {
+            const destinos = Array.from(container.querySelectorAll(".destino"));
+            let erro = "";
+
+            const destinosComDatas = destinos.map((d, i) => {
+                const dtInicial = d.querySelector(".dt-inicial")?.value;
+                const dtFinal = d.querySelector(".dt-final")?.value;
+                return {
+                    index: i + 1,
+                    dtInicial: dtInicial ? new Date(dtInicial) : null,
+                    dtFinal: dtFinal ? new Date(dtFinal) : null
+                };
+            });
+
+            for (let i = 0; i < destinosComDatas.length; i++) {
+                const atual = destinosComDatas[i];
+
+                // Regra 1: Data Final < Data Inicial
+                if (atual.dtFinal && atual.dtInicial && atual.dtFinal < atual.dtInicial) {
+                    erro = `O destino ${atual.index} possui data final anterior à data inicial.`;
+                    break;
+                }
+
+                // Regra 2: Data Inicial do destino atual < Data Final do destino anterior
+                if (i > 0) {
+                    const anterior = destinosComDatas[i - 1];
+                    if (atual.dtInicial && anterior.dtFinal && atual.dtInicial < anterior.dtFinal) {
+                        erro = `A data inicial do destino ${atual.index} deve ser posterior à data final do destino ${anterior.index}.`;
+                        break;
+                    }
+                }
+            }
+
+            if (erro) {
+                e.preventDefault();
+                mostrarAlerta(erro);
+                return false;
             }
         });
     });

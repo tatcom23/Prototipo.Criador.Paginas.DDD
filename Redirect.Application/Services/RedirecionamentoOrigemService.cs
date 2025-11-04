@@ -22,80 +22,38 @@ namespace Redirect.Application.Services
             _destinoRepository = destinoRepository;
         }
 
+        #region 🔹 Consultas
+
         public async Task<RedirecionamentoOrigemDTO?> ObterPorUrlOrigemAsync(string urlOrigem)
         {
             var entity = await _repository.ObterComDestinosAsync(urlOrigem);
-            if (entity == null) return null;
-
-            return new RedirecionamentoOrigemDTO
-            {
-                Codigo = entity.Codigo,
-                UrlOrigem = entity.UrlOrigem,
-                Ativo = entity.Ativo,
-                DtRedirecionamento = entity.DtRedirecionamento,
-                DtAtualizacao = entity.DtAtualizacao,
-                Destinos = entity.Destinos.Select(d => new RedirecionamentoDestinoDTO
-                {
-                    Codigo = d.Codigo,
-                    RedirecionamentoOrigemId = d.RedirecionamentoOrigemId,
-                    UrlDestino = d.UrlDestino,
-                    DtInicial = d.DtInicial,
-                    DtFinal = d.DtFinal,
-                    Ativo = d.Ativo
-                }).ToList()
-            };
+            return entity == null ? null : MapearOrigemParaDTO(entity);
         }
 
         public async Task<RedirecionamentoOrigemDTO?> ObterPorIdAsync(int id)
         {
             var entity = await _repository.ObterPorIdAsync(id);
-            if (entity == null) return null;
-
-            return new RedirecionamentoOrigemDTO
-            {
-                Codigo = entity.Codigo,
-                UrlOrigem = entity.UrlOrigem,
-                Ativo = entity.Ativo,
-                DtRedirecionamento = entity.DtRedirecionamento,
-                DtAtualizacao = entity.DtAtualizacao,
-                Destinos = entity.Destinos.Select(d => new RedirecionamentoDestinoDTO
-                {
-                    Codigo = d.Codigo,
-                    RedirecionamentoOrigemId = d.RedirecionamentoOrigemId,
-                    UrlDestino = d.UrlDestino,
-                    DtInicial = d.DtInicial,
-                    DtFinal = d.DtFinal,
-                    Ativo = d.Ativo
-                }).ToList()
-            };
+            return entity == null ? null : MapearOrigemParaDTO(entity);
         }
+
         public async Task<IEnumerable<RedirecionamentoOrigemDTO>> ObterTodosAsync()
         {
             var entities = await _repository.ObterTodosAsync();
-
-            return entities.Select(r => new RedirecionamentoOrigemDTO
-            {
-                Codigo = r.Codigo,
-                UrlOrigem = r.UrlOrigem,
-                Ativo = r.Ativo,
-                DtRedirecionamento = r.DtRedirecionamento,
-                DtAtualizacao = r.DtAtualizacao,
-                Destinos = r.Destinos.Select(d => new RedirecionamentoDestinoDTO
-                {
-                    Codigo = d.Codigo,
-                    RedirecionamentoOrigemId = d.RedirecionamentoOrigemId,
-                    UrlDestino = d.UrlDestino,
-                    DtInicial = d.DtInicial,
-                    DtFinal = d.DtFinal,
-                    Ativo = d.Ativo
-                }).ToList()
-            });
+            return entities
+                .Where(e => e.Ativo)
+                .Select(MapearOrigemParaDTO);
         }
+
+        #endregion
+
+        #region 🔹 CRUD Principal
 
         public async Task AdicionarAsync(RedirecionamentoOrigemDTO dto)
         {
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
+
+            ValidarDestinos(dto.Destinos);
 
             var entity = new RedirecionamentoOrigem
             {
@@ -103,23 +61,8 @@ namespace Redirect.Application.Services
                 Ativo = true,
                 DtRedirecionamento = dto.DtRedirecionamento ?? DateTime.Now,
                 DtAtualizacao = DateTime.Now,
-                Destinos = new List<RedirecionamentoDestino>()
+                Destinos = dto.Destinos?.Select(MapearDestinoParaEntity).ToList() ?? new List<RedirecionamentoDestino>()
             };
-
-            if (dto.Destinos != null && dto.Destinos.Any())
-            {
-                foreach (var destinoDto in dto.Destinos)
-                {
-                    var destino = new RedirecionamentoDestino
-                    {
-                        UrlDestino = destinoDto.UrlDestino,
-                        DtInicial = destinoDto.DtInicial,
-                        DtFinal = destinoDto.DtFinal,
-                        Ativo = true
-                    };
-                    entity.Destinos.Add(destino);
-                }
-            }
 
             await _repository.AdicionarAsync(entity);
         }
@@ -135,12 +78,12 @@ namespace Redirect.Application.Services
             entityExistente.DtAtualizacao = DateTime.Now;
 
             var destinosDto = dto.Destinos ?? new List<RedirecionamentoDestinoDTO>();
+            ValidarDestinos(destinosDto);
 
-            // Atualiza ou adiciona destinos
+            // 🔹 Atualiza ou adiciona destinos
             foreach (var destinoDto in destinosDto)
             {
-                var destinoExistente = entityExistente.Destinos
-                    .FirstOrDefault(d => d.Codigo == destinoDto.Codigo);
+                var destinoExistente = entityExistente.Destinos.FirstOrDefault(d => d.Codigo == destinoDto.Codigo);
 
                 if (destinoExistente != null)
                 {
@@ -151,13 +94,7 @@ namespace Redirect.Application.Services
                 }
                 else
                 {
-                    entityExistente.Destinos.Add(new RedirecionamentoDestino
-                    {
-                        UrlDestino = destinoDto.UrlDestino,
-                        DtInicial = destinoDto.DtInicial,
-                        DtFinal = destinoDto.DtFinal,
-                        Ativo = destinoDto.Ativo
-                    });
+                    entityExistente.Destinos.Add(MapearDestinoParaEntity(destinoDto));
                 }
             }
 
@@ -167,10 +104,7 @@ namespace Redirect.Application.Services
                 .ToList();
 
             foreach (var destino in destinosParaRemover)
-            {
-                // Remove do repositório de destinos para evitar conflito de FK
                 await _destinoRepository.RemoverAsync(destino.Codigo);
-            }
 
             await _repository.AtualizarAsync(entityExistente);
         }
@@ -181,23 +115,103 @@ namespace Redirect.Application.Services
             if (entity == null)
                 throw new Exception("Redirecionamento não encontrado.");
 
-            // 🔹 Remove todos os destinos associados no banco
-            if (entity.Destinos != null && entity.Destinos.Any())
+            // 🔹 Marca a origem como inativa
+            entity.Ativo = false;
+            entity.DtAtualizacao = DateTime.Now;
+
+            // 🔹 Também desativa todos os destinos associados
+            if (entity.Destinos?.Any() == true)
             {
-                foreach (var destino in entity.Destinos.ToList())
-                {
-                    await _destinoRepository.RemoverAsync(destino.Codigo);
-                }
+                foreach (var destino in entity.Destinos)
+                    destino.Ativo = false;
             }
 
-            // 🔹 Remove a origem
-            await _repository.RemoverAsync(entity.Codigo);
+            await _repository.AtualizarAsync(entity);
         }
 
-        // 🔹 Método usado pelo Middleware
+        #endregion
+
+        #region 🔹 Métodos Auxiliares
+
+        private void ValidarDestinos(IEnumerable<RedirecionamentoDestinoDTO>? destinos)
+        {
+            if (destinos == null || !destinos.Any())
+                return;
+
+            var destinosOrdenados = destinos
+                .OrderBy(d => d.DtInicial ?? DateTime.MinValue)
+                .ToList();
+
+            for (int i = 0; i < destinosOrdenados.Count; i++)
+            {
+                var atual = destinosOrdenados[i];
+
+                // 1️⃣ DtFinal < DtInicial
+                if (atual.DtFinal.HasValue && atual.DtInicial.HasValue &&
+                    atual.DtFinal.Value < atual.DtInicial.Value)
+                {
+                    throw new Exception($"O destino {i + 1} possui data final anterior à data inicial.");
+                }
+
+                // 2️⃣ DtInicial < DtFinal do destino anterior
+                if (i > 0)
+                {
+                    var anterior = destinosOrdenados[i - 1];
+                    if (atual.DtInicial.HasValue && anterior.DtFinal.HasValue &&
+                        atual.DtInicial.Value < anterior.DtFinal.Value)
+                    {
+                        throw new Exception($"A data inicial do destino {i + 1} deve ser posterior à data final do destino {i}.");
+                    }
+                }
+            }
+        }
+
+        private async Task RemoverDestinosAsync(IEnumerable<RedirecionamentoDestino> destinos)
+        {
+            foreach (var destino in destinos)
+                await _destinoRepository.RemoverAsync(destino.Codigo);
+        }
+
+        private static RedirecionamentoDestino MapearDestinoParaEntity(RedirecionamentoDestinoDTO dto)
+        {
+            return new RedirecionamentoDestino
+            {
+                Codigo = dto.Codigo,
+                UrlDestino = dto.UrlDestino,
+                DtInicial = dto.DtInicial,
+                DtFinal = dto.DtFinal,
+                Ativo = dto.Ativo
+            };
+        }
+
+        private static RedirecionamentoOrigemDTO MapearOrigemParaDTO(RedirecionamentoOrigem entity)
+        {
+            return new RedirecionamentoOrigemDTO
+            {
+                Codigo = entity.Codigo,
+                UrlOrigem = entity.UrlOrigem,
+                Ativo = entity.Ativo,
+                DtRedirecionamento = entity.DtRedirecionamento,
+                DtAtualizacao = entity.DtAtualizacao,
+                Destinos = entity.Destinos?.Select(d => new RedirecionamentoDestinoDTO
+                {
+                    Codigo = d.Codigo,
+                    RedirecionamentoOrigemId = d.RedirecionamentoOrigemId,
+                    UrlDestino = d.UrlDestino,
+                    DtInicial = d.DtInicial,
+                    DtFinal = d.DtFinal,
+                    Ativo = d.Ativo
+                }).ToList() ?? new List<RedirecionamentoDestinoDTO>()
+            };
+        }
+
+        #endregion
+
+        #region 🔹 Middleware Helper
+
         public RedirecionamentoDestinoDTO? SelecionarDestinoValido(RedirecionamentoOrigemDTO origem)
         {
-            if (origem == null || origem.Destinos == null || !origem.Destinos.Any())
+            if (origem?.Destinos == null || !origem.Destinos.Any())
                 return null;
 
             var agora = DateTime.Now;
@@ -210,5 +224,7 @@ namespace Redirect.Application.Services
                 .OrderBy(d => d.DtInicial ?? DateTime.MinValue)
                 .FirstOrDefault();
         }
+
+        #endregion
     }
 }
