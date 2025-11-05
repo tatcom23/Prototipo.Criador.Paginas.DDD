@@ -46,6 +46,12 @@ namespace Redirect.Application.Services.Interfaces
         /// Seleciona o destino válido com base nas datas (usado pelo middleware).
         /// </summary>
         RedirecionamentoDestinoDTO? SelecionarDestinoValido(RedirecionamentoOrigemDTO origem);
+        /// <summary>
+        /// Obtém lista paginada de origens de redirecionamento.
+        /// Retorna os itens e o total de registros.
+        /// </summary>
+        Task<(IEnumerable<RedirecionamentoOrigemDTO> Itens, int Total)> ObterPaginadoAsync(int page, int pageSize);
+
     }
 }
 

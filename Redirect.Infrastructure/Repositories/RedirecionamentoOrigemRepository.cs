@@ -41,6 +41,7 @@ namespace Redirect.Infrastructure.Repositories
         {
             return await _context.RedirecionamentoOrigens
                 .Include(r => r.Destinos)
+                .Where(r => r.Ativo)
                 .ToListAsync();
         }
 
@@ -61,9 +62,33 @@ namespace Redirect.Infrastructure.Repositories
             var entity = await _context.RedirecionamentoOrigens.FindAsync(id);
             if (entity != null)
             {
-                _context.RedirecionamentoOrigens.Remove(entity);
+                // 🔹 Não exclui fisicamente — apenas desativa
+                entity.Ativo = false;
+                _context.RedirecionamentoOrigens.Update(entity);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        // 🔹 Implementação da paginação
+        public async Task<(IEnumerable<RedirecionamentoOrigem> Itens, int TotalItens)> ObterPaginadoAsync(int page, int pageSize)
+        {
+            if (pageSize != 5 && pageSize != 10 && pageSize != 15 && pageSize != 20)
+                pageSize = 10; // valor padrão seguro
+
+            var query = _context.RedirecionamentoOrigens
+                .Include(r => r.Destinos)
+                .Where(r => r.Ativo)
+                .OrderByDescending(r => r.DtAtualizacao)
+                .AsNoTracking();
+
+            var totalItens = await query.CountAsync();
+
+            var itens = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (itens, totalItens);
         }
     }
 }

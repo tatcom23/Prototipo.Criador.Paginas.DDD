@@ -205,6 +205,18 @@ namespace Redirect.Application.Services
             };
         }
 
+        public async Task<(IEnumerable<RedirecionamentoOrigemDTO> Itens, int Total)> ObterPaginadoAsync(int page, int pageSize)
+        {
+            // 🔹 Chama o repositório (que usa o contexto e faz Skip/Take no banco)
+            var (itens, totalItens) = await _repository.ObterPaginadoAsync(page, pageSize);
+
+            // 🔹 Mapeia para DTOs
+            var dtos = itens.Select(MapearOrigemParaDTO);
+
+            return (dtos, totalItens);
+        }
+
+
         #endregion
 
         #region 🔹 Middleware Helper

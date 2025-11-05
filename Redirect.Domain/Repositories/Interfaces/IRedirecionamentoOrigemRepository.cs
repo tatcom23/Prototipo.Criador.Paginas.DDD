@@ -12,8 +12,7 @@ namespace Redirect.Domain.Repositories.Interfaces
         Task AdicionarAsync(RedirecionamentoOrigem redirecionamentoOrigem);
         Task AtualizarAsync(RedirecionamentoOrigem redirecionamentoOrigem);
         Task RemoverAsync(int id);
-
-        // 🔹 Inclui os destinos
+        Task<(IEnumerable<RedirecionamentoOrigem> Itens, int TotalItens)> ObterPaginadoAsync(int page, int pageSize);
         Task<RedirecionamentoOrigem?> ObterComDestinosAsync(string urlOrigem);
     }
 }

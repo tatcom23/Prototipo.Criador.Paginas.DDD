@@ -3,6 +3,31 @@
 
 @{
     ViewData["Title"] = "Lista de Redirecionamentos";
+
+    // 🔹 Parâmetros de paginação
+    int pageSize = 10;
+    int currentPage = 1;
+
+    var pageQuery = ViewContext.HttpContext.Request.Query["page"];
+    var sizeQuery = ViewContext.HttpContext.Request.Query["pageSize"];
+
+    if (!string.IsNullOrEmpty(sizeQuery))
+        int.TryParse(sizeQuery, out pageSize);
+
+    if (!string.IsNullOrEmpty(pageQuery))
+    {
+        int.TryParse(pageQuery, out currentPage);
+        if (currentPage < 1)
+            currentPage = 1;
+    }
+
+    int totalItems = ViewBag.Total ?? (Model?.Count() ?? 0);
+    int totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+    var paginatedModel = Model?.OrderBy(o => o.UrlOrigem).ToList();
+
+
+    int[] pageSizeOptions = new[] { 5, 10, 15, 20 };
 }
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
@@ -13,11 +38,36 @@
             <i class="fa-solid fa-right-left me-2"></i> Redirecionamentos
         </h2>
         <a href="@Url.Action("Create")" class="btn btn-success shadow-sm d-flex align-items-center gap-2">
-            <i class="fa-solid fa-circle-plus mx-1 mx-1"></i> Novo
+            <i class="fa-solid fa-circle-plus mx-1"></i> Novo
         </a>
     </div>
 
-    @if (Model?.Any() == true)
+    <!-- 🔹 Seletor de quantidade de registros -->
+    <div class="d-flex justify-content-end mt-4 mb-3">
+        <form method="get" class="d-flex align-items-center gap-2 small">
+            <label for="pageSize" class="text-secondary mb-0 mx-2">Registros por página:</label>
+            <select name="pageSize" id="pageSize" class="form-select form-select-sm page-size-select" onchange="this.form.submit()">
+                @{
+                    foreach (var size in pageSizeOptions)
+                    {
+                        if (size == pageSize)
+                        {
+                            @:
+                            <option value="@size" selected>@size</option>
+                        }
+                        else
+                        {
+                            @:
+                            <option value="@size">@size</option>
+                        }
+                    }
+                }
+            </select>
+            <input type="hidden" name="page" value="@currentPage" />
+        </form>
+    </div>
+
+    @if (paginatedModel?.Any() == true)
     {
         <div class="table-responsive shadow-sm rounded-3 bg-white">
             <table class="table table-hover align-middle mb-0">
@@ -33,10 +83,10 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var origem in Model.OrderBy(o => o.UrlOrigem))
+                    @foreach (var origem in paginatedModel)
                     {
                         var destinos = origem.Destinos.OrderByDescending(d => d.DtInicial).ToList();
-                        <!-- Linha da origem -->
+
                         <tr class="table-primary">
                             <td class="fw-bold text-primary">@origem.UrlOrigem</td>
                             <td colspan="2"></td>
@@ -54,16 +104,12 @@
                             </td>
                             <td class="text-center">
                                 <div class="d-flex justify-content-center gap-2">
-                                    <!-- Editar Origem -->
                                     <a href="@Url.Action("Edit", "Redirect", new { id = origem.Codigo })"
-                                       class="btn btn-warning btn-sm shadow-sm mx-1"
-                                       title="Editar Origem">
+                                       class="btn btn-warning btn-sm shadow-sm mx-1" title="Editar Origem">
                                         <i class="fa-solid fa-pen"></i>
                                     </a>
-                                    <!-- Excluir Origem -->
                                     <a href="@Url.Action("Delete", "Redirect", new { id = origem.Codigo })"
-                                       class="btn btn-danger btn-sm shadow-sm mx-1"
-                                       title="Excluir Origem">
+                                       class="btn btn-danger btn-sm shadow-sm mx-1" title="Excluir Origem">
                                         <i class="fa-solid fa-trash"></i>
                                     </a>
                                 </div>
@@ -112,6 +158,34 @@
                 </tbody>
             </table>
         </div>
+
+        <!-- 🔹 Paginação -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mt-4 gap-3">
+            <div class="text-muted small">
+                Página <strong>@currentPage</strong> de <strong>@totalPages</strong> —
+                Exibindo <strong>@paginatedModel.Count</strong> de <strong>@totalItems</strong> registros
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <nav>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item @(currentPage == 1 ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(currentPage - 1)&pageSize=@pageSize">Anterior</a>
+                        </li>
+
+                        @for (int i = 1; i <= totalPages; i++)
+                        {
+                            <li class="page-item @(i == currentPage ? "active" : "")">
+                                <a class="page-link" href="?page=@i&pageSize=@pageSize">@i</a>
+                            </li>
+                        }
+
+                        <li class="page-item @(currentPage == totalPages ? "disabled" : "")">
+                            <a class="page-link" href="?page=@(currentPage + 1)&pageSize=@pageSize">Próxima</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        </div>
     }
     else
     {
@@ -148,4 +222,25 @@
         border-radius: 0.75rem;
         overflow: hidden;
     }
+
+    .pagination .page-item.active .page-link {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+        color: #fff;
+    }
+
+    /* 🔹 Estilo quadradinho e discreto */
+    select.form-select-sm {
+        background-color: #f8f9fa;
+        border: 1px solid #ccc;
+        border-radius: 0.25rem;
+        padding: 3px 8px;
+        font-size: 0.85rem;
+        width: 70px;
+    }
+
+        select.form-select-sm:focus {
+            box-shadow: none;
+            border-color: #999;
+        }
 </style>

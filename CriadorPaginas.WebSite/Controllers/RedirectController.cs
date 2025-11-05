@@ -16,12 +16,14 @@ namespace CriadorPaginas.WebSite.Controllers
             _origemService = origemService;
         }
 
-        // 🔹 LISTAGEM DE ORIGENS
-        public async Task<IActionResult> Index()
+        // 🔹 LISTAGEM DE ORIGENS (com paginação)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-            var origens = await _origemService.ObterTodosAsync();
-            return View(origens);
+            var (itens, total) = await _origemService.ObterPaginadoAsync(page, pageSize);
+            ViewBag.Total = total;
+            return View(itens);
         }
+
 
         // 🔹 CRIAR NOVO
         public IActionResult Create()
@@ -44,7 +46,7 @@ namespace CriadorPaginas.WebSite.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // 🔹 EDITAR ORIGEM E DESTINOS (centralizado)
+        // 🔹 EDITAR ORIGEM E DESTINOS
         public async Task<IActionResult> Edit(int id)
         {
             var dto = await _origemService.ObterPorIdAsync(id);
@@ -69,7 +71,7 @@ namespace CriadorPaginas.WebSite.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // 🔹 EXCLUIR ORIGEM (ETAPA 1 - CONFIRMAÇÃO)
+        // 🔹 EXCLUIR ORIGEM (ETAPA 1)
         public async Task<IActionResult> Delete(int id)
         {
             var dto = await _origemService.ObterPorIdAsync(id);
@@ -79,7 +81,7 @@ namespace CriadorPaginas.WebSite.Controllers
             return View("ConfirmDeleteOrigem", dto);
         }
 
-        // 🔹 EXCLUIR ORIGEM (ETAPA 2 - CONFIRMADO)
+        // 🔹 EXCLUIR ORIGEM (ETAPA 2)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
@@ -97,10 +99,9 @@ namespace CriadorPaginas.WebSite.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // 🔹 EXCLUIR DESTINO (ETAPA 1 - CONFIRMAÇÃO)
+        // 🔹 EXCLUIR DESTINO (ETAPA 1)
         public async Task<IActionResult> DeleteDestino(int id)
         {
-            // Busca a origem contendo esse destino
             var origens = await _origemService.ObterTodosAsync();
             var origem = origens?.FirstOrDefault(o => o.Destinos?.Any(d => d.Codigo == id) == true);
 
@@ -114,16 +115,15 @@ namespace CriadorPaginas.WebSite.Controllers
             return View("ConfirmDeleteDestino", destino);
         }
 
-        // 🔹 EXCLUIR DESTINO (ETAPA 2 - CONFIRMADO)
+        // 🔹 EXCLUIR DESTINO (ETAPA 2)
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteDestinoConfirmed(int id)
         {
             try
             {
-                // Agora o método de exclusão de destino está dentro do OrigemService
-                var origem = await _origemService.ObterTodosAsync()
-                    .ContinueWith(t => t.Result?.FirstOrDefault(o => o.Destinos?.Any(d => d.Codigo == id) == true));
+                var origem = (await _origemService.ObterTodosAsync())
+                    .FirstOrDefault(o => o.Destinos?.Any(d => d.Codigo == id) == true);
 
                 if (origem == null)
                     return NotFound();
