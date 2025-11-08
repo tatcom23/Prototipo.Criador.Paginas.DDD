@@ -39,6 +39,35 @@
         <input type="file" name="BannerFile" class="form-control" />
     </div>
 
+    <h4 class="mt-4 d-flex align-items-center gap-2">
+        <i class="bi bi-images"></i> Carrossel de Imagens
+    </h4>
+
+    <button type="button" id="btn-add-carrossel" class="btn btn-outline-primary mb-3">
+        Adicionar carrossel
+    </button>
+
+    <div id="carrossel-container" class="border rounded p-3 d-none">
+
+        <div class="mb-3">
+            <label class="form-label">Título do carrossel</label>
+            <input type="text" name="carrosselTitulo" class="form-control"
+                   placeholder="Ex: Carrossel principal" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Imagens do carrossel</label>
+            <input type="file"
+                   class="form-control"
+                   name="CarrosselFiles"
+                   multiple
+                   accept="image/*" />
+
+            <small class="text-muted">Selecione 1 ou mais imagens (JPG, PNG, GIF...)</small>
+        </div>
+
+    </div>
+
     <h4 class="mt-4">Botões de navegação</h4>
     <div id="botoes-container">
         @for (int i = 0; i < Model.Botoes.Count; i++)
@@ -259,6 +288,26 @@
             atualizarOrdemBotoesPrincipais();
             atualizarOrdemBotoesTopicos();
             tinymce.triggerSave();
+        });
+
+            document.getElementById("btn-add-carrossel").addEventListener("click", function () {
+            const div = document.getElementById("carrossel-container");
+
+            if (div.classList.contains("d-none")) {
+                div.classList.remove("d-none");
+                this.textContent = "Remover carrossel";
+                this.classList.remove("btn-outline-primary");
+                this.classList.add("btn-outline-danger");
+            } else {
+                div.classList.add("d-none");
+                this.textContent = "Adicionar carrossel";
+                this.classList.remove("btn-outline-danger");
+                this.classList.add("btn-outline-primary");
+
+                // Limpa campos caso o usuário remova o carrossel
+                div.querySelector("input[name='carrosselTitulo']").value = "";
+                div.querySelector("input[name='CarrosselFiles']").value = null;
+            }
         });
     </script>
 }

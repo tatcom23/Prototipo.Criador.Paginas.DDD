@@ -47,7 +47,6 @@ namespace Paginas.Application.Services
             await _repo.SalvarAlteracoesAsync();
         }
 
-        // NOVO: Criar imagem vinculada a um Carrossel específico
         public async Task<CarrosselImagemDTO> CriarAsync(CarrosselImagemDTO model, int cdCarrossel)
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
@@ -63,7 +62,7 @@ namespace Paginas.Application.Services
             await _repo.AdicionarAsync(imagem);
             await _repo.SalvarAlteracoesAsync();
 
-            return imagem.ToDTO(); // Retorna DTO com Código preenchido
+            return imagem.ToDTO();
         }
 
         public async Task AtualizarAsync(int id, CarrosselImagemDTO model)

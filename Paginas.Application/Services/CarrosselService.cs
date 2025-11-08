@@ -13,10 +13,14 @@ namespace Paginas.Application.Services
     public class CarrosselService : ICarrosselService
     {
         private readonly ICarrosselRepository _repo;
+        private readonly ICarrosselImagemRepository _imagemRepo;
 
-        public CarrosselService(ICarrosselRepository repo)
+        public CarrosselService(
+            ICarrosselRepository repo,
+            ICarrosselImagemRepository imagemRepo)
         {
             _repo = repo;
+            _imagemRepo = imagemRepo;
         }
 
         public async Task<List<CarrosselDTO>> ListarPorPaginaAsync(int cdPagina)
@@ -35,14 +39,12 @@ namespace Paginas.Application.Services
         {
             if (model == null) throw new ArgumentNullException(nameof(model));
 
-            // Cria a entidade usando o construtor que recebe o cdPagina
             var carrossel = new Carrossel(
                 cdPagina: paginaId,
                 titulo: model.Titulo,
                 descricao: model.Descricao
             );
 
-            // Adiciona no repositório
             await _repo.AdicionarAsync(carrossel);
             await _repo.SalvarAlteracoesAsync();
 
@@ -64,53 +66,59 @@ namespace Paginas.Application.Services
             var carrossel = await _repo.ObterPorIdAsync(id);
             if (carrossel == null) return;
 
-            carrossel.Imagens.Clear();
-            await _repo.RemoverAsync(carrossel);
+            // remove imagens
+            _repo.RemoverAsync(carrossel);
             await _repo.SalvarAlteracoesAsync();
         }
 
-        public async Task AdicionarImagemAsync(int cdCarrossel, CarrosselImagemDTO imagem)
+        // SALVAR IMAGEM (corrigido pra usar imagemRepo)
+        public async Task AdicionarImagemAsync(int cdCarrossel, CarrosselImagemDTO dto)
         {
-            var carrossel = await _repo.ObterPorIdAsync(cdCarrossel);
-            if (carrossel == null) throw new ArgumentNullException(nameof(carrossel));
+            if (dto == null) throw new ArgumentNullException(nameof(dto));
 
-            carrossel.AdicionarImagem(imagem.ToEntity());
-            await _repo.AtualizarAsync(carrossel);
-            await _repo.SalvarAlteracoesAsync();
+            var imagem = dto.ToEntity();
+            imagem.CdCarrossel = cdCarrossel;
+
+            await _imagemRepo.AdicionarAsync(imagem);
+            await _imagemRepo.SalvarAlteracoesAsync();
         }
 
-        public async Task AtualizarImagemAsync(int id, CarrosselImagemDTO imagem)
+        // usa repo correto
+        public async Task AtualizarImagemAsync(int id, CarrosselImagemDTO dto)
         {
-            var img = await _repo.ObterImagemPorIdAsync(id);
+            var img = await _imagemRepo.ObterPorIdAsync(id);
             if (img == null) return;
 
-            img.Atualizar(imagem.UrlImagem, imagem.Ordem, imagem.Titulo, imagem.Descricao);
-            await _repo.SalvarAlteracoesAsync();
+            img.Atualizar(dto.UrlImagem, dto.Ordem, dto.Titulo, dto.Descricao);
+
+            await _imagemRepo.AtualizarAsync(img);
+            await _imagemRepo.SalvarAlteracoesAsync();
         }
 
         public async Task ExcluirImagemAsync(int id)
         {
-            var img = await _repo.ObterImagemPorIdAsync(id);
+            var img = await _imagemRepo.ObterPorIdAsync(id);
             if (img == null) return;
 
-            var carrossel = img.Carrossel;
-            carrossel.RemoverImagem(img);
-            await _repo.SalvarAlteracoesAsync();
+            await _imagemRepo.RemoverAsync(img);
+            await _imagemRepo.SalvarAlteracoesAsync();
         }
 
         public async Task AtualizarOrdemImagensAsync(int cdCarrossel, List<int> ordemIds)
         {
-            var carrossel = await _repo.ObterPorIdAsync(cdCarrossel);
-            if (carrossel == null) return;
+            var imagens = await _imagemRepo.ListarPorCarrosselAsync(cdCarrossel);
 
             for (int i = 0; i < ordemIds.Count; i++)
             {
-                var img = carrossel.Imagens.FirstOrDefault(x => x.Codigo == ordemIds[i]);
+                var img = imagens.FirstOrDefault(x => x.Codigo == ordemIds[i]);
                 if (img != null)
+                {
                     img.Atualizar(img.UrlImagem, i + 1, img.Titulo, img.Descricao);
+                    await _imagemRepo.AtualizarAsync(img);
+                }
             }
 
-            await _repo.SalvarAlteracoesAsync();
+            await _imagemRepo.SalvarAlteracoesAsync();
         }
     }
 }

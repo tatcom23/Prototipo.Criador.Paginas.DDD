@@ -4,8 +4,8 @@ namespace Paginas.Domain.Entities
 {
     public class CarrosselImagem
     {
-        public int Codigo { get; private set; }
-        public int CdCarrossel { get; private set; }
+        public int Codigo { get; set; }
+        public int CdCarrossel { get; set; }
         public string? Titulo { get; private set; }
         public string? Descricao { get; private set; }
         public string UrlImagem { get; private set; }

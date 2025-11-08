@@ -27,145 +27,177 @@ namespace Paginas.Web.Controllers
             ICarrosselService carrosselService,
             ICarrosselImagemService carrosselImagemService,
             IWebHostEnvironment env,
-            IDashboardService dashboardService) // ✅ Adicionei aqui
+            IDashboardService dashboardService)
         {
-            _paginaService = paginaService ?? throw new ArgumentNullException(nameof(paginaService));
-            _carrosselService = carrosselService ?? throw new ArgumentNullException(nameof(carrosselService));
-            _carrosselImagemService = carrosselImagemService ?? throw new ArgumentNullException(nameof(carrosselImagemService));
-            _env = env ?? throw new ArgumentNullException(nameof(env));
-            _dashboardService = dashboardService ?? throw new ArgumentNullException(nameof(dashboardService));
+            _paginaService = paginaService;
+            _carrosselService = carrosselService;
+            _carrosselImagemService = carrosselImagemService;
+            _env = env;
+            _dashboardService = dashboardService;
         }
 
+        // =======================================================================
+        //  LISTAGEM
+        // =======================================================================
+
+        [HttpGet("Listar")]
+        public async Task<IActionResult> Listar(int page = 1, int pageSize = 10)
+        {
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize <= 0 ? 10 : pageSize;
+
+            var (itens, total) = await _paginaService.ListarPaginadoAsync(page, pageSize);
+
+            itens ??= new List<PaginaDTO>();
+
+            foreach (var p in itens)
+            {
+                p.PaginaFilhos ??= new List<PaginaDTO>();
+                p.Botoes ??= new List<BotaoDTO>();
+            }
+
+            ViewBag.Page = page;
+            ViewBag.PageSize = pageSize;
+            ViewBag.TotalCount = total;
+            ViewBag.TotalPages = (int)Math.Ceiling(total / (double)pageSize);
+
+            return View("Listar", itens);
+        }
+
+        // =======================================================================
+        //  CRIAÇÃO 
+        // =======================================================================
 
         [HttpGet("Index")]
-        public IActionResult Index() => View(new PaginaDTO());
+        public IActionResult Index()
+        {
+            var modelo = new PaginaDTO
+            {
+                PaginaFilhos = new List<PaginaDTO>(),
+                Carrosseis = new List<CarrosselDTO>(),
+                Botoes = new List<BotaoDTO>()
+            };
+
+            return View("Index", modelo);
+        }
+
 
         [HttpPost("Index")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Index(
-            [FromForm] PaginaDTO model,
+            PaginaDTO model,
             IFormFile BannerFile,
-            [FromForm] List<IFormFile> CarrosselFiles,
-            [FromForm] string carrosselTitulo)
+            List<IFormFile> CarrosselFiles,
+            string carrosselTitulo)
         {
             if (!ModelState.IsValid)
                 return View(model);
 
-            // Validação URL página principal
+            // Garantir URL única somente para páginas principais
             if (model.CdPai == null)
             {
                 var paginas = await _paginaService.ListarAsync();
-                if (paginas.Any(p => p.Url == model.Url && p.Codigo != model.Codigo))
+                if (paginas.Any(p => string.Equals(p.Url, model.Url, StringComparison.OrdinalIgnoreCase)))
                 {
                     ModelState.AddModelError("Url", "Já existe uma página principal com esta URL.");
                     return View(model);
                 }
             }
 
-            // Upload Banner
+            // Upload do Banner
             if (BannerFile != null && BannerFile.Length > 0)
             {
-                string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
-                string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeBanner);
+                string nome = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
+                string caminho = Path.Combine(_env.WebRootPath, "imagens", nome);
+
                 using var stream = new FileStream(caminho, FileMode.Create);
                 await BannerFile.CopyToAsync(stream);
-                model.Banner = "/imagens/" + nomeBanner;
+
+                model.Banner = "/imagens/" + nome;
             }
 
-            // Gerar slug para tópicos sem URL
+            // Gerar URLs faltantes dos filhos
             if (model.PaginaFilhos != null)
             {
-                foreach (var topico in model.PaginaFilhos)
-                {
-                    if (string.IsNullOrWhiteSpace(topico.Url))
-                        topico.Url = GerarSlug(topico.Titulo);
-                }
+                foreach (var f in model.PaginaFilhos)
+                    if (string.IsNullOrWhiteSpace(f.Url))
+                        f.Url = GerarSlug(f.Titulo);
             }
 
-            // Salvar Página principal
+            // Criar página (método de serviço que retorna void)
             await _paginaService.CriarAsync(model, _env.WebRootPath);
 
-            // Upload Carrossel e imagens
+            // Recuperar a página criada consultando todas e procurando pela URL (case-insensitive)
+            var todasPaginas = await _paginaService.ListarAsync();
+            var paginaCriada = todasPaginas
+                .FirstOrDefault(p => string.Equals(p.Url, model.Url, StringComparison.OrdinalIgnoreCase)
+                                     && p.CdPai == model.CdPai);
+
+            if (paginaCriada == null)
+            {
+                TempData["Mensagem"] = "Página criada, mas ocorreu um problema ao recuperar seu identificador. Verifique o sistema.";
+                return model.CdPai == null
+                    ? RedirectToAction("Listar")
+                    : RedirectToAction("Gerenciar", new { id = model.CdPai });
+            }
+
+            // Criar carrossel (se houver arquivos)
             if (CarrosselFiles != null && CarrosselFiles.Any())
             {
-                // Cria novo carrossel
-                var carrosselDto = new CarrosselDTO
-                {
-                    Titulo = string.IsNullOrWhiteSpace(carrosselTitulo) ? "Carrossel principal" : carrosselTitulo,
-                    Imagens = new List<CarrosselImagemDTO>()
-                };
-
-                // Salvar carrossel no banco
-                var carrosselEntity = await _carrosselService.CriarAsync(carrosselDto, model.Codigo);
+                var carrossel = await _carrosselService.CriarAsync(
+                    new CarrosselDTO
+                    {
+                        Titulo = string.IsNullOrWhiteSpace(carrosselTitulo)
+                            ? "Carrossel principal"
+                            : carrosselTitulo
+                    },
+                    paginaCriada.Codigo);
 
                 int ordem = 1;
+
                 foreach (var file in CarrosselFiles)
                 {
-                    if (file.Length <= 0) continue;
+                    if (file.Length == 0) continue;
 
                     string nomeImg = Guid.NewGuid() + Path.GetExtension(file.FileName);
                     string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeImg);
+
                     using var stream = new FileStream(caminho, FileMode.Create);
                     await file.CopyToAsync(stream);
 
-                    var imagemDto = new CarrosselImagemDTO
-                    {
-                        Titulo = file.FileName,
-                        UrlImagem = "/imagens/" + nomeImg,
-                        Ordem = ordem++
-                    };
-
-                    // Salvar cada imagem no banco
-                    await _carrosselImagemService.CriarAsync(imagemDto, carrosselEntity.Codigo);
+                    await _carrosselImagemService.CriarAsync(
+                        new CarrosselImagemDTO
+                        {
+                            Titulo = file.FileName,
+                            UrlImagem = "/imagens/" + nomeImg,
+                            Ordem = ordem++
+                        },
+                        carrossel.Codigo);
                 }
             }
 
             TempData["Mensagem"] = "Página criada com sucesso!";
+
             return model.CdPai == null
                 ? RedirectToAction("Listar")
                 : RedirectToAction("Gerenciar", new { id = model.CdPai });
         }
 
-        [HttpGet("Listar")]
-        public async Task<IActionResult> Listar([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
-        {
-            if (page < 1) page = 1;
-            if (pageSize <= 0) pageSize = 10;
-
-            var (itensDto, totalCount) = await _paginaService.ListarPaginadoAsync(page, pageSize);
-
-            if (itensDto != null)
-            {
-                foreach (var p in itensDto)
-                {
-                    p.PaginaFilhos ??= new List<PaginaDTO>();
-                    p.Botoes ??= new List<BotaoDTO>();
-                }
-            }
-            else
-            {
-                itensDto = new List<PaginaDTO>();
-            }
-
-            var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
-
-            ViewBag.Page = page;
-            ViewBag.PageSize = pageSize;
-            ViewBag.TotalCount = totalCount;
-            ViewBag.TotalPages = totalPages;
-
-            return View("Listar", itensDto);
-        }
+        // =======================================================================
+        //  EDIÇÃO
+        // =======================================================================
 
         [HttpGet("Editar/{id}")]
         public async Task<IActionResult> Editar(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null) return NotFound();
 
-            pagina.Botoes ??= new List<BotaoDTO>();
+            if (pagina == null)
+                return NotFound();
+
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.Carrosseis ??= new List<CarrosselDTO>();
+            pagina.Botoes ??= new List<BotaoDTO>();
 
             return View("Editar", pagina);
         }
@@ -174,24 +206,25 @@ namespace Paginas.Web.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Editar(
             int id,
-            [FromForm] PaginaDTO model,
+            PaginaDTO model,
             IFormFile BannerFile,
-            [FromForm] List<IFormFile> CarrosselFiles,
-            [FromForm] string carrosselTitulo)
+            List<IFormFile> CarrosselFiles,
+            string carrosselTitulo)
         {
             if (!ModelState.IsValid)
                 return View("Editar", model);
 
             var paginaExistente = await _paginaService.BuscarPorIdAsync(id);
-            if (paginaExistente == null) return NotFound();
+            if (paginaExistente == null)
+                return NotFound();
 
             bool ehTopico = paginaExistente.CdPai.HasValue;
 
-            // Validação URL página principal
-            if (!ehTopico && model.Url != paginaExistente.Url)
+            // Validar URL somente se alterada
+            if (!ehTopico && paginaExistente.Url != model.Url)
             {
                 var paginas = await _paginaService.ListarAsync();
-                if (paginas.Any(p => p.Url == model.Url && p.Codigo != id))
+                if (paginas.Any(x => x.Url == model.Url && x.Codigo != id))
                 {
                     ModelState.AddModelError("Url", "Já existe uma página principal com esta URL.");
                     return View("Editar", model);
@@ -199,85 +232,95 @@ namespace Paginas.Web.Controllers
             }
 
             // Upload Banner
-            if (BannerFile != null && BannerFile.Length > 0)
+            if (BannerFile != null)
             {
-                string nomeBanner = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
-                string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeBanner);
+                string nome = Guid.NewGuid() + Path.GetExtension(BannerFile.FileName);
+                string caminho = Path.Combine(_env.WebRootPath, "imagens", nome);
+
                 using var stream = new FileStream(caminho, FileMode.Create);
                 await BannerFile.CopyToAsync(stream);
-                model.Banner = "/imagens/" + nomeBanner;
+
+                model.Banner = "/imagens/" + nome;
             }
             else
             {
                 model.Banner = paginaExistente.Banner;
             }
 
-            // Gerar slug para tópicos
+            // Slug auto para filhos
             if (model.PaginaFilhos != null)
             {
-                foreach (var topico in model.PaginaFilhos)
-                {
-                    if (string.IsNullOrWhiteSpace(topico.Url))
-                        topico.Url = GerarSlug(topico.Titulo);
-                }
+                foreach (var f in model.PaginaFilhos)
+                    if (string.IsNullOrWhiteSpace(f.Url))
+                        f.Url = GerarSlug(f.Titulo);
             }
 
             // Atualizar página
             await _paginaService.AtualizarAsync(id, model, _env.WebRootPath);
 
-            // Upload Carrossel adicional
+            // Carrossel adicional
             if (CarrosselFiles != null && CarrosselFiles.Any())
             {
-                var carrosselDto = new CarrosselDTO
-                {
-                    Titulo = string.IsNullOrWhiteSpace(carrosselTitulo) ? "Carrossel adicional" : carrosselTitulo,
-                    Imagens = new List<CarrosselImagemDTO>()
-                };
-
-                var carrosselEntity = await _carrosselService.CriarAsync(carrosselDto, id);
+                var carrossel = await _carrosselService.CriarAsync(
+                    new CarrosselDTO
+                    {
+                        Titulo = string.IsNullOrWhiteSpace(carrosselTitulo)
+                            ? "Carrossel adicional"
+                            : carrosselTitulo
+                    },
+                    id);
 
                 int ordem = 1;
+
                 foreach (var file in CarrosselFiles)
                 {
-                    if (file.Length <= 0) continue;
+                    if (file.Length == 0) continue;
 
                     string nomeImg = Guid.NewGuid() + Path.GetExtension(file.FileName);
                     string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeImg);
+
                     using var stream = new FileStream(caminho, FileMode.Create);
                     await file.CopyToAsync(stream);
 
-                    var imagemDto = new CarrosselImagemDTO
-                    {
-                        Titulo = file.FileName,
-                        UrlImagem = "/imagens/" + nomeImg,
-                        Ordem = ordem++
-                    };
-
-                    await _carrosselImagemService.CriarAsync(imagemDto, carrosselEntity.Codigo);
+                    await _carrosselImagemService.CriarAsync(
+                        new CarrosselImagemDTO
+                        {
+                            Titulo = file.FileName,
+                            UrlImagem = "/imagens/" + nomeImg,
+                            Ordem = ordem++
+                        },
+                        carrossel.Codigo);
                 }
             }
 
             TempData["Mensagem"] = "Página atualizada com sucesso!";
+
             return ehTopico
-                ? RedirectToAction("Gerenciar", new { id = paginaExistente.CdPai.Value })
-                : RedirectToAction("Gerenciar", new { id = id });
+                ? RedirectToAction("Gerenciar", new { id = paginaExistente.CdPai })
+                : RedirectToAction("Gerenciar", new { id });
         }
+
+        // =======================================================================
+        //  EXCLUSÃO
+        // =======================================================================
 
         [HttpGet("Excluir/{id}")]
         public async Task<IActionResult> Excluir(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null) return NotFound();
+            if (pagina == null)
+                return NotFound();
+
             return View("Excluir", pagina);
         }
 
         [HttpPost("Excluir/{id}")]
-        [ActionName("Excluir")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ConfirmarExclusao(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null) return NotFound();
+            if (pagina == null)
+                return NotFound();
 
             bool ehTopico = pagina.CdPai.HasValue;
             int? cdPai = pagina.CdPai;
@@ -287,25 +330,99 @@ namespace Paginas.Web.Controllers
             TempData["Mensagem"] = "Página excluída com sucesso!";
 
             return ehTopico
-                ? RedirectToAction("Gerenciar", new { id = cdPai.Value })
+                ? RedirectToAction("Gerenciar", new { id = cdPai })
                 : RedirectToAction("Listar");
         }
+
+        // =======================================================================
+        //  EXIBIR PÚBLICO
+        // =======================================================================
 
         [HttpGet("exibir/{url}", Name = "Pagina_Exibir")]
         public async Task<IActionResult> Exibir(string url)
         {
+            if (string.IsNullOrWhiteSpace(url))
+                return NotFound();
+
+            // Busca todas as páginas (como você já fazia)
             var paginas = await _paginaService.ListarAsync();
-            var pagina = paginas.FirstOrDefault(p => p.Url == url && p.Tipo == (int)TipoPagina.Principal);
 
-            if (pagina == null) return NotFound();
+            // Encontra a página principal pela URL
+            var pagina = paginas.FirstOrDefault(p => string.Equals(p.Url, url, StringComparison.OrdinalIgnoreCase)
+                                                     && p.Tipo == (int)TipoPagina.Principal);
 
-            var filhos = paginas.Where(p => p.CdPai == pagina.Codigo).OrderBy(p => p.Ordem).ToList();
+            if (pagina == null)
+                return NotFound();
+
+            // Inicializa coleções
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
-            pagina.PaginaFilhos.Clear();
-            pagina.PaginaFilhos.AddRange(filhos);
+            pagina.Carrosseis ??= new List<CarrosselDTO>();
+            pagina.Botoes ??= new List<BotaoDTO>();
+
+            // 1) Carregar carrosseis da página usando o serviço existente
+            try
+            {
+                var carrosseis = await _carrosselService.ListarPorPaginaAsync(pagina.Codigo);
+                if (carrosseis != null && carrosseis.Any())
+                {
+                    // Para cada carrossel, carregar as imagens
+                    foreach (var c in carrosseis)
+                    {
+                        c.Imagens ??= new List<CarrosselImagemDTO>();
+                        var imagens = await _carrosselImagemService.ListarPorCarrosselAsync(c.Codigo);
+                        if (imagens != null && imagens.Any())
+                        {
+                            // garante ordenação por Ordem (opcional)
+                            c.Imagens = imagens.OrderBy(i => i.Ordem).ToList();
+                        }
+                    }
+
+                    pagina.Carrosseis = carrosseis;
+                }
+            }
+            catch
+            {
+                // opcional: logar erro. Não falhar a renderização inteira.
+                pagina.Carrosseis = pagina.Carrosseis ?? new List<CarrosselDTO>();
+            }
+
+            // 2) Carregar carrosseis dos tópicos/filhos (se necessário)
+            var filhos = paginas.Where(x => x.CdPai == pagina.Codigo).OrderBy(x => x.Ordem).ToList();
+            foreach (var f in filhos)
+            {
+                f.Carrosseis ??= new List<CarrosselDTO>();
+
+                try
+                {
+                    var carrosseisFilho = await _carrosselService.ListarPorPaginaAsync(f.Codigo);
+                    if (carrosseisFilho != null && carrosseisFilho.Any())
+                    {
+                        foreach (var c in carrosseisFilho)
+                        {
+                            c.Imagens ??= new List<CarrosselImagemDTO>();
+                            var imagens = await _carrosselImagemService.ListarPorCarrosselAsync(c.Codigo); // corrigir nome se diferente
+                            if (imagens != null && imagens.Any())
+                                c.Imagens = imagens.OrderBy(i => i.Ordem).ToList();
+                        }
+
+                        f.Carrosseis = carrosseisFilho;
+                    }
+                }
+                catch
+                {
+                    f.Carrosseis = f.Carrosseis ?? new List<CarrosselDTO>();
+                }
+            }
+
+            pagina.PaginaFilhos = filhos;
 
             return View("Exibir", pagina);
         }
+
+
+        // =======================================================================
+        //  ORDENAÇÃO
+        // =======================================================================
 
         [HttpPost("AtualizarOrdem")]
         [ValidateAntiForgeryToken]
@@ -315,11 +432,17 @@ namespace Paginas.Web.Controllers
             return RedirectToAction("Gerenciar", new { id = paginaId });
         }
 
+        // =======================================================================
+        //  GERENCIAR PÁGINA
+        // =======================================================================
+
         [HttpGet("Gerenciar/{id}")]
         public async Task<IActionResult> Gerenciar(int id)
         {
             var pagina = await _paginaService.BuscarPorIdAsync(id);
-            if (pagina == null) return NotFound();
+
+            if (pagina == null)
+                return NotFound();
 
             pagina.PaginaFilhos ??= new List<PaginaDTO>();
             pagina.Botoes ??= new List<BotaoDTO>();
@@ -328,60 +451,63 @@ namespace Paginas.Web.Controllers
             return View("Gerenciar", pagina);
         }
 
-        private string GerarSlug(string titulo)
-        {
-            if (string.IsNullOrWhiteSpace(titulo)) return Guid.NewGuid().ToString();
+        // =======================================================================
+        //  DASHBOARD
+        // =======================================================================
 
-            return titulo
-                .ToLowerInvariant()
-                .Normalize(System.Text.NormalizationForm.FormD)
-                .Where(c => char.IsLetterOrDigit(c) || c == ' ')
-                .Aggregate("", (s, c) => s += c)
-                .Replace(" ", "-")
-                .Trim('-');
-        }
-
-        public async Task<IActionResult> Dashboard(string periodo = null, DateTime? dataInicio = null, DateTime? dataFim = null)
+        public async Task<IActionResult> Dashboard(string periodo = null, DateTime? inicio = null, DateTime? fim = null)
         {
-            // Permite ignorar diferença de maiúsculas/minúsculas
-            PeriodoRelatorio periodoEnum;
-            if (!Enum.TryParse(periodo, ignoreCase: true, out periodoEnum))
-            {
+            if (!Enum.TryParse(periodo, true, out PeriodoRelatorio periodoEnum))
                 periodoEnum = PeriodoRelatorio.MesAtual;
-            }
 
-            // Se nenhum período for informado, apenas renderiza a view sem relatório
-            if (string.IsNullOrEmpty(periodo) && !dataInicio.HasValue && !dataFim.HasValue)
+            if (string.IsNullOrEmpty(periodo) && !inicio.HasValue && !fim.HasValue)
             {
                 ViewBag.PeriodoSelecionado = periodoEnum.ToString();
                 return View(null);
             }
 
-            // Busca os dados com base no período selecionado
-            var dashboardDto = await _paginaService.ObterDadosDashboardAsync(dataInicio, dataFim, periodoEnum);
+            var dados = await _paginaService.ObterDadosDashboardAsync(inicio, fim, periodoEnum);
 
             ViewBag.PeriodoSelecionado = periodoEnum.ToString();
-            return View(dashboardDto);
+
+            return View(dados);
         }
 
-
-        [HttpPost]
+        [HttpPost("DashboardPdf")]
         public async Task<IActionResult> DashboardPdf(string graficoBase64)
         {
-            byte[] graficoBytes = null;
+            byte[] bytesGrafico = null;
 
-            if (!string.IsNullOrEmpty(graficoBase64))
+            if (!string.IsNullOrWhiteSpace(graficoBase64))
             {
                 graficoBase64 = graficoBase64.Replace("data:image/png;base64,", "");
-                graficoBytes = Convert.FromBase64String(graficoBase64);
+                bytesGrafico = Convert.FromBase64String(graficoBase64);
             }
 
-            // Recupera os dados reais do dashboard
             var dados = await _paginaService.ObterDadosDashboardAsync();
 
-            var pdf = _dashboardService.GerarPdf(dados, graficoBytes);
+            var pdf = _dashboardService.GerarPdf(dados, bytesGrafico);
+
             return File(pdf, "application/pdf", "Dashboard.pdf");
         }
 
+        // =======================================================================
+        //  SLUG
+        // =======================================================================
+
+        private string GerarSlug(string titulo)
+        {
+            if (string.IsNullOrWhiteSpace(titulo))
+                return Guid.NewGuid().ToString();
+
+            return titulo
+                .ToLowerInvariant()
+                .Normalize(System.Text.NormalizationForm.FormD)
+                .Where(c => char.IsLetterOrDigit(c) || c == ' ')
+                .Aggregate("", (acc, c) => acc + c)
+                .Trim()
+                .Replace(" ", "-")
+                .Trim('-');
+        }
     }
 }
