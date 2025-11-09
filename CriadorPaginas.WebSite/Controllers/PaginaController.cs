@@ -88,7 +88,12 @@ namespace Paginas.Web.Controllers
             PaginaDTO model,
             IFormFile BannerFile,
             List<IFormFile> CarrosselFiles,
-            string carrosselTitulo)
+            string carrosselTitulo,
+            // NOVO CAMPO: Descrição do Carrossel
+            string carrosselDescricao,
+            // NOVOS CAMPOS: Listas de Títulos e Descrições das Imagens
+            List<string> CarrosselImagensTitulos,
+            List<string> CarrosselImagensDescricoes)
         {
             if (!ModelState.IsValid)
                 return View(model);
@@ -147,17 +152,31 @@ namespace Paginas.Web.Controllers
                 var carrossel = await _carrosselService.CriarAsync(
                     new CarrosselDTO
                     {
+                        // Inclui a descrição do carrossel
                         Titulo = string.IsNullOrWhiteSpace(carrosselTitulo)
                             ? "Carrossel principal"
-                            : carrosselTitulo
+                            : carrosselTitulo,
+                        Descricao = carrosselDescricao // <--- AQUI!
                     },
                     paginaCriada.Codigo);
 
                 int ordem = 1;
 
-                foreach (var file in CarrosselFiles)
+                // Itera sobre os arquivos e usa o índice para pegar o título/descrição correspondente
+                for (int i = 0; i < CarrosselFiles.Count; i++)
                 {
+                    var file = CarrosselFiles[i];
+
                     if (file.Length == 0) continue;
+
+                    // Tenta obter o Título e a Descrição do CarrosselImagensTitulos/Descricoes
+                    string tituloImagem = (CarrosselImagensTitulos != null && i < CarrosselImagensTitulos.Count)
+                        ? CarrosselImagensTitulos[i]
+                        : file.FileName;
+
+                    string descricaoImagem = (CarrosselImagensDescricoes != null && i < CarrosselImagensDescricoes.Count)
+                        ? CarrosselImagensDescricoes[i]
+                        : string.Empty;
 
                     string nomeImg = Guid.NewGuid() + Path.GetExtension(file.FileName);
                     string caminho = Path.Combine(_env.WebRootPath, "imagens", nomeImg);
@@ -168,7 +187,8 @@ namespace Paginas.Web.Controllers
                     await _carrosselImagemService.CriarAsync(
                         new CarrosselImagemDTO
                         {
-                            Titulo = file.FileName,
+                            Titulo = tituloImagem, // <--- AQUI!
+                            Descricao = descricaoImagem, // <--- AQUI!
                             UrlImagem = "/imagens/" + nomeImg,
                             Ordem = ordem++
                         },

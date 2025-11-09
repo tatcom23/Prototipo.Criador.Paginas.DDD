@@ -91,8 +91,10 @@
                         <div class="d-flex flex-wrap gap-2 mt-2">
                             <a asp-action="Gerenciar" asp-route-id="@pagina.Codigo"
                                class="btn btn-warning btn-sm d-flex align-items-center gap-1 shadow-sm">Editar</a>
-                            <a asp-action="Excluir" asp-route-id="@pagina.Codigo"
-                               class="btn btn-danger btn-sm d-flex align-items-center gap-1 shadow-sm mx-2">Excluir</a>
+                            <a href="@Url.Action("Excluir", "Pagina", new { id = pagina.Codigo })"
+                               class="btn btn-danger btn-sm d-flex align-items-center gap-1 shadow-sm mx-2">
+                                Excluir
+                            </a>
                             <a asp-action="Exibir" asp-route-id="@pagina.Url"
                                class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm">Exibir</a>
                         </div>

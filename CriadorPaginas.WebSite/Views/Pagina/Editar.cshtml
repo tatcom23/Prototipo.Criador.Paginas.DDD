@@ -2,6 +2,8 @@
 @{
     ViewData["Title"] = "Editar Página Introdutória";
     var isPrincipal = Model.CdPai == null;
+    // Defina o link de retorno, ajuste a action/controller se necessário
+    var linkVoltar = Url.Action("Gerenciar", new { id = Model.Codigo });
 }
 
 <h1>@ViewData["Title"]</h1>
@@ -39,6 +41,43 @@
         </div>
     }
 
+    <h4 class="mt-4">Carrossel de Imagens</h4>
+
+    <button type="button" id="btn-add-carrossel" class="btn btn-outline-primary mb-3">
+        Adicionar carrossel
+    </button>
+
+    <div id="carrossel-container" class="border rounded p-3 d-none">
+
+        <div class="mb-3">
+            <label class="form-label">Título do carrossel</label>
+            <input type="text" name="carrosselTitulo" class="form-control"
+                   placeholder="Ex: Carrossel principal" />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Descrição do carrossel</label>
+            <textarea name="carrosselDescricao" class="form-control" rows="3"
+                      placeholder="Breve descrição do carrossel (opcional)"></textarea>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Imagens do carrossel</label>
+            <input type="file"
+                   class="form-control"
+                   id="CarrosselFilesInput"
+                   name="CarrosselFiles"
+                   multiple
+                   accept="image/*" />
+
+            <small class="text-muted">Selecione 1 ou mais imagens (JPG, PNG, GIF...).</small>
+        </div>
+
+        <div id="carrossel-previews" class="row">
+        </div>
+
+    </div>
+
     @* Botões: adicionar novos botões *@
     <h4 class="mt-4">Botões</h4>
     <div id="botoes-container"></div>
@@ -52,7 +91,8 @@
         <button type="button" id="add-topico" class="btn btn-secondary">Adicionar Tópico</button>
     }
 
-    <div class="mt-3">
+    <div class="mt-4 d-flex justify-content-end">
+        <a href="@linkVoltar" class="btn btn-outline-danger me-2 mx-2">Cancelar</a>
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
     </div>
 </form>
@@ -186,6 +226,146 @@
             document.querySelector('form').addEventListener('submit', function () {
                 tinymce.triggerSave();
             });
+        }
+
+        // CARROSSEL
+        document.getElementById('btn-add-carrossel').addEventListener('click', function () {
+            const carrosselContainer = document.getElementById('carrossel-container');
+            // Alterna a classe d-none para mostrar/esconder o container
+            carrosselContainer.classList.toggle('d-none');
+
+            // Opcional: Altera o texto do botão para indicar a ação oposta
+            if (carrosselContainer.classList.contains('d-none')) {
+                this.textContent = 'Adicionar carrossel';
+            } else {
+                this.textContent = 'Remover carrossel (ou Ocultar)';
+            }
+        });
+        document.getElementById('CarrosselFilesInput').addEventListener('change', function (e) {
+            const container = document.getElementById('carrossel-previews');
+            container.innerHTML = ''; // Limpa previews anteriores
+            const files = Array.from(e.target.files); // Converte para Array para manipulação
+
+            if (files.length > 0) {
+                // Armazena os arquivos selecionados para que possamos manipular a remoção
+                container.currentFiles = files;
+                renderPreviews(container, files);
+            } else {
+                container.currentFiles = [];
+            }
+        });
+
+        function renderPreviews(container, files) {
+            container.innerHTML = ''; // Limpa previews
+
+            files.forEach((file, i) => {
+                // Verifica se o arquivo é válido (se foi removido, ele será null)
+                if (!file) return;
+
+                // O índice [${i}] agora reflete a posição no array de arquivos (incluindo nulos)
+                // Isso é importante para manter a correspondência com os arrays de títulos e descrições no Controller
+                const html = `
+                    <div class="col-md-3 mb-3 image-preview-block" data-file-index="${i}">
+                        <div class="card p-1">
+                            <div class="position-relative">
+                                <img src="${URL.createObjectURL(file)}"
+                                     class="img-thumbnail mb-2"
+                                     style="height: 100px; width: 100%; object-fit: cover;"
+                                     alt="Prévia da Imagem ${i + 1}" />
+                                <button type="button"
+                                        class="remove-image-btn"
+                                        style="position: absolute; top: 0; right: 0;
+                                               background-color: #dc3545; border: none; border-radius: 0.25rem;
+                                               padding: 0.3rem 0.6rem; cursor: pointer;"
+                                        aria-label="Remover Imagem"
+                                        data-file-index="${i}">
+                                    <i class="bi bi-x-lg text-white" style="font-size: 0.8rem;"></i>
+                                </button>
+                            </div>
+
+                            <small class="text-muted mb-2 text-truncate d-block" title="${file.name}">
+                                Imagem ${i + 1} - ${file.name}
+                            </small>
+
+                            <label class="form-label small mb-0">Título</label>
+                            <input type="text"
+                                   name="CarrosselImagensTitulos[${i}]"
+                                   class="form-control form-control-sm mb-2"
+                                   placeholder="Título (opcional)"
+                                   value="${file.name.split('.').slice(0, -1).join('.')}" />
+
+                            <label class="form-label small mb-0">Descrição</label>
+                            <textarea name="CarrosselImagensDescricoes[${i}]"
+                                      class="form-control form-control-sm" rows="1"
+                                      placeholder="Descrição (opcional)"></textarea>
+
+                            <input type="hidden" name="CarrosselIndicesParaProcessar" value="${i}" />
+                        </div>
+                    </div>`;
+
+                container.insertAdjacentHTML('beforeend', html);
+            });
+
+            // Adiciona o event listener para os botões de remoção
+            container.querySelectorAll('.remove-image-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    const indexToRemove = parseInt(this.getAttribute('data-file-index'));
+                    removeImage(container, indexToRemove);
+                });
+            });
+        }
+
+        function removeImage(container, index) {
+            const files = container.currentFiles;
+
+            // Remove o arquivo do array, substituindo-o por null
+            // O array principal é mantido com "buracos" (nulls) para que os índices [${i}]
+            // nos outros campos (títulos, descrições) continuem mapeados corretamente.
+            files[index] = null;
+
+            // Remove o bloco de preview do DOM
+            const blockToRemove = container.querySelector(`.image-preview-block[data-file-index="${index}"]`);
+            if (blockToRemove) {
+                blockToRemove.remove();
+            }
+
+            // Oculta os inputs de Título e Descrição removidos para não serem submetidos
+            // Isso é feito para evitar que eles sejam enviados se a imagem correspondente foi removida.
+            // É uma camada extra de segurança, pois o loop 'renderPreviews' já não os renderizaria.
+            // Como estamos removendo o bloco inteiro, essa parte se torna mais simples.
+
+            // No entanto, para o input de arquivo principal, precisamos recriar o FileList sem os nulos
+            updateFileInput(files);
+        }
+
+        function updateFileInput(files) {
+            const dataTransfer = new DataTransfer();
+            files.forEach(file => {
+                if (file) {
+                    dataTransfer.items.add(file);
+                }
+            });
+
+            const fileInput = document.getElementById('CarrosselFilesInput');
+            // Atualiza o FileList do input
+            fileInput.files = dataTransfer.files;
+
+            // Se o input principal tiver sua lista de arquivos alterada, o evento 'change'
+            // não é disparado automaticamente. O `renderPreviews` é mais simples:
+            // ele deve ser chamado quando a lista de arquivos mudar no input, ou como no nosso caso,
+            // quando o array `currentFiles` for manipulado.
+
+            // A abordagem mais simples para lidar com o envio é:
+            // 1. Manter os campos de Título e Descrição no DOM (com os índices)
+            // 2. Ocultar o bloco removido (feito acima com `.remove()`)
+            // 3. Apenas os arquivos do `dataTransfer.files` serão enviados no `CarrosselFiles`
+
+            // O Controller precisará ignorar os títulos e descrições cujos índices [i]
+            // não correspondem a um arquivo real enviado em `CarrosselFiles`.
+            // Por isso, adicionei o campo oculto `CarrosselIndicesParaProcessar`
+            // que só está presente para as imagens *não* removidas.
+            // O Controller deve usar *apenas* os índices listados nesse campo para
+            // buscar os títulos/descrições nos arrays `CarrosselImagensTitulos` e `CarrosselImagensDescricoes`.
         }
     </script>
 }
