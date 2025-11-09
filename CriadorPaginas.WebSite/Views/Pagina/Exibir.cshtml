@@ -35,7 +35,15 @@
             {
                 if (c.Imagens != null && c.Imagens.Any())
                 {
-                    <h3 class="text-center mb-3">@c.Titulo</h3>
+                    <h3 class="text-center mb-2">@c.Titulo</h3>
+
+                    @* Exibe a descrição do carrossel se existir *@
+                    @if (!string.IsNullOrWhiteSpace(c.Descricao))
+                    {
+                        <p class="text-center text-muted mb-4" style="font-size: 0.95rem;">
+                            @c.Descricao
+                        </p>
+                    }
 
                     var carouselId = $"carouselPagina-{c.Codigo}";
 
@@ -84,7 +92,6 @@
             }
         </div>
     }
-
 
     <!-- Botões principais -->
     @if (botoesOrdenados.Any())
