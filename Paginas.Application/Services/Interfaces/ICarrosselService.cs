@@ -20,5 +20,6 @@ namespace Paginas.Application.Services.Interfaces
         Task AtualizarImagemAsync(int id, CarrosselImagemDTO imagem);
         Task ExcluirImagemAsync(int id);
         Task AtualizarOrdemImagensAsync(int cdCarrossel, List<int> ordemIds);
+        Task SalvarCarrosselCompletoAsync(CarrosselDTO model);
     }
 }

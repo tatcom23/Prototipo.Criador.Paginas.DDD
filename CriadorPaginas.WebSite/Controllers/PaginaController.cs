@@ -335,6 +335,115 @@ namespace Paginas.Web.Controllers
         }
 
         // =======================================================================
+        //  EDITAR CARROSSEL
+        // =======================================================================
+
+        [HttpGet("EditarCarrossel/{id}")]
+        public async Task<IActionResult> EditarCarrossel(int id)
+        {
+            var carrossel = await _carrosselService.BuscarPorIdAsync(id);
+            if (carrossel == null)
+                return NotFound();
+
+            // carrossel.Imagens = await _carrosselImagemService.ListarPorCarrosselAsync(id);
+
+            return View("EditarCarrossel", carrossel);
+        }
+
+        [HttpPost("EditarCarrossel/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarCarrossel(int id, CarrosselDTO model)
+        {
+            if (!ModelState.IsValid)
+                return View("EditarCarrossel", model);
+
+            await _carrosselService.AtualizarAsync(id, model);
+
+            TempData["Mensagem"] = "Carrossel atualizado com sucesso!";
+            return RedirectToAction("Gerenciar", new { id = model.CdPagina });
+        }
+
+        [HttpPost("Carrossel/AdicionarImagem")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AdicionarImagem(int cdCarrossel, string titulo, string descricao, IFormFile imagemFile)
+        {
+            if (imagemFile != null)
+            {
+                string nome = Guid.NewGuid() + Path.GetExtension(imagemFile.FileName);
+                string caminho = Path.Combine(_env.WebRootPath, "imagens", nome);
+
+                using (var stream = new FileStream(caminho, FileMode.Create))
+                    await imagemFile.CopyToAsync(stream);
+
+                var dto = new CarrosselImagemDTO
+                {
+                    CdCarrossel = cdCarrossel,
+                    UrlImagem = "/imagens/" + nome,
+                    Titulo = titulo,
+                    Descricao = descricao,
+                    Ordem = 999 // coloca no final
+                };
+
+                await _carrosselImagemService.CriarAsync(dto);
+            }
+
+            TempData["Mensagem"] = "Imagem adicionada!";
+            return RedirectToAction("EditarCarrossel", new { id = cdCarrossel });
+        }
+
+        [HttpPost("Carrossel/EditarImagem/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> EditarImagem(int id, CarrosselImagemDTO model)
+        {
+            await _carrosselImagemService.AtualizarAsync(id, model);
+
+            TempData["Mensagem"] = "Imagem atualizada!";
+            return RedirectToAction("EditarCarrossel", new { id = model.CdCarrossel });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SalvarCarrosselCompleto(CarrosselDTO model)
+        {
+            if (!ModelState.IsValid)
+                return View("EditarCarrossel", model);
+
+            await _carrosselService.SalvarCarrosselCompletoAsync(model);
+
+            TempData["Mensagem"] = "Carrossel atualizado com sucesso!";
+            return RedirectToAction("Gerenciar", new { id = model.CdPagina });
+        }
+
+
+        // =======================================================================
+        //  EXCLUIR IMAGEM
+        // =======================================================================
+        [HttpPost("Carrossel/ExcluirImagem/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExcluirImagem(int id, int cdCarrossel)
+        {
+            await _carrosselImagemService.ExcluirAsync(id);
+
+            TempData["Mensagem"] = "Imagem removida!";
+            return RedirectToAction("EditarCarrossel", new { id = cdCarrossel });
+        }
+
+        // =======================================================================
+        //  EXCLUIR CARROSSEL
+        // =======================================================================
+
+        [HttpPost("Carrossel/Excluir/{id}")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExcluirCarrossel(int id, int cdPagina)
+        {
+            await _carrosselService.ExcluirAsync(id);
+
+            TempData["Mensagem"] = "Carrossel excluído!";
+            return RedirectToAction("Gerenciar", new { id = cdPagina });
+        }
+
+
+        // =======================================================================
         //  EXIBIR PÚBLICO
         // =======================================================================
 
@@ -429,6 +538,20 @@ namespace Paginas.Web.Controllers
         public async Task<IActionResult> AtualizarOrdem(int idA, int idB, int paginaId)
         {
             await _paginaService.AtualizarOrdemAsync(idA, idB);
+            return RedirectToAction("Gerenciar", new { id = paginaId });
+        }
+
+        // =======================================================================
+        //  ORDENAÇÃO DE IMAGENS DO CARROSSEL
+        // =======================================================================
+
+        [HttpPost("CarrosselImagem/AtualizarOrdem")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> AtualizarOrdemImagem(int idA, int idB, int carrosselId, int paginaId)
+        {
+            await _carrosselImagemService.AtualizarOrdemAsync(idA, idB);
+
+            TempData["Mensagem"] = "Ordem atualizada!";
             return RedirectToAction("Gerenciar", new { id = paginaId });
         }
 

@@ -65,20 +65,14 @@ namespace Paginas.Application.Services
             return imagem.ToDTO();
         }
 
-        public async Task AtualizarAsync(int id, CarrosselImagemDTO model)
+        public async Task AtualizarAsync(int id, CarrosselImagemDTO dto)
         {
-            var imagem = await _repo.ObterPorIdAsync(id);
+            var imagem = await _repo.ObterPorIdAsync(id); // já rastreada
             if (imagem == null) return;
 
-            imagem.Atualizar(
-                urlImagem: model.UrlImagem,
-                ordem: model.Ordem,
-                titulo: model.Titulo,
-                descricao: model.Descricao
-            );
+            imagem.Atualizar(dto.UrlImagem, dto.Ordem, dto.Titulo, dto.Descricao);
 
-            await _repo.AtualizarAsync(imagem);
-            await _repo.SalvarAlteracoesAsync();
+            await _repo.SalvarAlteracoesAsync(); // não precisa chamar Update
         }
 
         public async Task ExcluirAsync(int id)

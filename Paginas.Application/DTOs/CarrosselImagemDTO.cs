@@ -16,6 +16,7 @@ namespace Paginas.Application.DTOs
         public bool Ativo { get; set; }
         public DateTime Criacao { get; set; }
         public DateTime? Alteracao { get; set; }
+        public bool Excluir { get; set; }
 
         // Relacionamento
         public int CdCarrossel { get; set; }

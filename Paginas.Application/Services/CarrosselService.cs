@@ -61,6 +61,37 @@ namespace Paginas.Application.Services
             await _repo.SalvarAlteracoesAsync();
         }
 
+        public async Task SalvarCarrosselCompletoAsync(CarrosselDTO model)
+        {
+            // Carrossel rastreado pelo EF
+            var carrossel = await _repo.ObterPorIdAsync(model.Codigo);
+            if (carrossel == null) return;
+
+            // Atualiza campos principais
+            carrossel.Atualizar(model.Titulo, model.Descricao);
+
+            // Atualiza/remover imagens
+            var imagensDb = carrossel.Imagens.ToList(); // snapshot da lista
+            foreach (var imgDto in model.Imagens)
+            {
+                var imgDb = imagensDb.FirstOrDefault(i => i.Codigo == imgDto.Codigo);
+
+                if (imgDto.Excluir)
+                {
+                    if (imgDb != null)
+                        carrossel.RemoverImagem(imgDb);
+                    continue;
+                }
+
+                if (imgDb != null)
+                    imgDb.Atualizar(imgDto.UrlImagem, imgDto.Ordem, imgDto.Titulo, imgDto.Descricao);
+            }
+
+            // Atualiza o carrossel no repositório (importante para EF detectar alterações na lista)
+            await _repo.AtualizarAsync(carrossel);
+            await _repo.SalvarAlteracoesAsync();
+        }
+
         public async Task ExcluirAsync(int id)
         {
             var carrossel = await _repo.ObterPorIdAsync(id);

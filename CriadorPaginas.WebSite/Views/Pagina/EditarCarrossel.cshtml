@@ -1,0 +1,173 @@
+﻿@model Paginas.Application.DTOs.CarrosselDTO
+
+@{
+    ViewData["Title"] = "Editar Carrossel";
+}
+
+<div class="container mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-primary"><i class="bi bi-images me-2"></i> Editar Carrossel</h2>
+        <form asp-action="ExcluirCarrossel"
+              asp-route-id="@Model.Codigo"
+              asp-route-cdPagina="@Model.CdPagina"
+              method="post"
+              onsubmit="return confirm('Excluir este carrossel?')">
+            <button class="btn btn-danger"><i class="bi bi-trash"></i> Excluir Carrossel</button>
+        </form>
+    </div>
+
+    <form asp-action="SalvarCarrosselCompleto" method="post" id="formCarrossel">
+        <input type="hidden" asp-for="Codigo" />
+        <input type="hidden" asp-for="CdPagina" />
+
+        <!-- Info do Carrossel -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">Informações do Carrossel</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Título</label>
+                    <input asp-for="Titulo" class="form-control" />
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <textarea asp-for="Descricao" class="form-control"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de imagens -->
+        <h4 class="mt-4">Imagens do Carrossel</h4>
+        <div class="row" id="gridImagens">
+            @if (Model.Imagens != null && Model.Imagens.Any())
+            {
+                @for (int i = 0; i < Model.Imagens.Count; i++)
+                {
+                    <div class="col-md-4 mb-4 imagem-card" data-codigo="@Model.Imagens[i].Codigo">
+                        <div class="card shadow-sm position-relative">
+                            <img src="@Model.Imagens[i].UrlImagem" class="card-img-top" style="height:200px; object-fit:cover;" />
+                            <!-- Botão X vermelho -->
+                            <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 remover-imagem" style="font-weight:bold; font-size:1.2rem; line-height:1;">
+                                ×
+                            </button>
+                            <div class="card-body">
+                                <input type="hidden" name="Imagens[@i].Codigo" value="@Model.Imagens[i].Codigo" />
+                                <input type="hidden" name="Imagens[@i].UrlImagem" value="@Model.Imagens[i].UrlImagem" />
+                                <input type="hidden" name="Imagens[@i].Ordem" value="@Model.Imagens[i].Ordem" />
+
+                                <div class="mb-2">
+                                    <label class="form-label">Título</label>
+                                    <input type="text" name="Imagens[@i].Titulo" value="@Model.Imagens[i].Titulo" class="form-control" />
+                                </div>
+                                <div class="mb-2">
+                                    <label class="form-label">Descrição</label>
+                                    <textarea name="Imagens[@i].Descricao" class="form-control">@Model.Imagens[i].Descricao</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+            <a asp-action="Gerenciar" asp-route-id="@Model.CdPagina" class="btn btn-secondary mx-1">Cancelar</a>
+            <button class="btn btn-primary"><i class="bi bi-save mx-1"></i> Salvar Tudo</button>
+        </div>
+    </form>
+
+    <!-- Botão dinâmico para adicionar nova imagem -->
+    <div class="mt-4">
+        <button id="btnAddImagem" class="btn btn-success mb-3">
+            <i class="bi bi-plus-circle"></i> Adicionar Nova Imagem
+        </button>
+
+        <div id="novoCampoImagem" class="card shadow-sm p-3 mb-4" style="display:none;">
+            <div class="mb-3">
+                <label class="form-label">Arquivo da Imagem</label>
+                <input type="file" id="imagemFile" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Título</label>
+                <input type="text" id="imagemTitulo" class="form-control" />
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Descrição</label>
+                <textarea id="imagemDescricao" class="form-control"></textarea>
+            </div>
+            <button id="btnSalvarImagem" class="btn btn-success">Salvar Imagem</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Mostrar campo de nova imagem
+        document.getElementById('btnAddImagem').addEventListener('click', function() {
+            const novoCampo = document.getElementById('novoCampoImagem');
+            novoCampo.style.display = novoCampo.style.display === 'none' ? 'block' : 'none';
+        });
+
+        // Adicionar imagem dinamicamente à grid
+        document.getElementById('btnSalvarImagem').addEventListener('click', function(e) {
+            e.preventDefault();
+
+            const fileInput = document.getElementById('imagemFile');
+            const titulo = document.getElementById('imagemTitulo').value;
+            const descricao = document.getElementById('imagemDescricao').value;
+
+            if (!fileInput.files.length) {
+                alert('Selecione um arquivo de imagem!');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const container = document.getElementById('gridImagens');
+                const idx = container.children.length;
+
+                const div = document.createElement('div');
+                div.className = 'col-md-4 mb-4 imagem-card';
+                div.innerHTML = `
+                    <div class="card shadow-sm position-relative">
+                        <img src="${e.target.result}" class="card-img-top" style="height:200px; object-fit:cover;" />
+                        <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 remover-imagem" style="font-weight:bold; font-size:1.2rem; line-height:1;">
+                            ×
+                        </button>
+                        <div class="card-body">
+                            <input type="hidden" name="Imagens[${idx}].Codigo" value="0" />
+                            <input type="hidden" name="Imagens[${idx}].UrlImagem" value="${e.target.result}" />
+                            <input type="hidden" name="Imagens[${idx}].Ordem" value="${idx + 1}" />
+
+                            <div class="mb-2">
+                                <label class="form-label">Título</label>
+                                <input type="text" name="Imagens[${idx}].Titulo" value="${titulo}" class="form-control" />
+                            </div>
+                            <div class="mb-2">
+                                <label class="form-label">Descrição</label>
+                                <textarea name="Imagens[${idx}].Descricao" class="form-control">${descricao}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(div);
+
+                // Limpar campos
+                fileInput.value = '';
+                document.getElementById('imagemTitulo').value = '';
+                document.getElementById('imagemDescricao').value = '';
+                document.getElementById('novoCampoImagem').style.display = 'none';
+            }
+            reader.readAsDataURL(fileInput.files[0]);
+        });
+
+        // Remover imagem da grid com X vermelho
+        document.getElementById('gridImagens').addEventListener('click', function(e) {
+            const btn = e.target.closest('.remover-imagem');
+            if (btn) {
+                const card = btn.closest('.imagem-card');
+                if (card) card.remove();
+            }
+        });
+    </script>
+}

@@ -20,6 +20,7 @@ namespace Paginas.Infrastructure.Repositories
         public async Task<List<CarrosselImagem>> ListarPorCarrosselAsync(int cdCarrossel)
         {
             return await _context.CarrosselImagens
+                .AsNoTracking()
                 .Where(i => i.CdCarrossel == cdCarrossel)
                 .ToListAsync();
         }
