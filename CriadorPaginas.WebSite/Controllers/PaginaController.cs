@@ -634,6 +634,22 @@ namespace Paginas.Web.Controllers
             return File(pdf, "application/pdf", "Dashboard.pdf");
         }
 
+        [HttpPost("DashboardExcel")]
+        public async Task<IActionResult> DashboardExcel()
+        {
+            // Captura os dados sem precisar de gráfico
+            var dados = await _paginaService.ObterDadosDashboardAsync();
+
+            // Chama o serviço que você vai criar (GerarExcel)
+            var excel = _dashboardService.GerarExcel(dados);
+
+            return File(
+                excel,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "Dashboard.xlsx"
+            );
+        }
+
         // =======================================================================
         //  SLUG
         // =======================================================================

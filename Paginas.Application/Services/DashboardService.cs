@@ -3,6 +3,7 @@ using PdfSharpCore.Pdf;
 using Paginas.Application.DTOs;
 using System;
 using System.IO;
+using ClosedXML.Excel;
 
 namespace Paginas.Application.Services
 {
@@ -95,6 +96,55 @@ namespace Paginas.Application.Services
             document.Save(stream);
             return stream.ToArray();
 
+        }
+        public byte[] GerarExcel(DashboardViewModel model)
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Dashboard");
+
+            int row = 1;
+
+            // Título
+            worksheet.Cell(row, 1).Value = "Dashboard de Páginas Introdutórias";
+            worksheet.Range(row, 1, row, 4).Merge().Style
+                .Font.SetBold().Font.SetFontSize(18);
+            row += 2;
+
+            // Total de páginas
+            worksheet.Cell(row, 1).Value = "Total de Páginas Ativas:";
+            worksheet.Cell(row, 2).Value = model.TotalPaginasAtivas;
+            worksheet.Row(row).Style.Font.SetBold();
+            row += 2;
+
+            // Cabeçalho da Tabela
+            worksheet.Cell(row, 1).Value = "Título";
+            worksheet.Cell(row, 2).Value = "Data Criação";
+            worksheet.Cell(row, 3).Value = "Data Atualização";
+            worksheet.Cell(row, 4).Value = "Qtd Tópicos";
+
+            worksheet.Range(row, 1, row, 4).Style.Font.SetBold();
+            worksheet.Range(row, 1, row, 4).Style.Fill.SetBackgroundColor(XLColor.LightGray);
+
+            row++;
+
+            // Linhas
+            foreach (var item in model.Tabela)
+            {
+                worksheet.Cell(row, 1).Value = item.Titulo;
+                worksheet.Cell(row, 2).Value = item.Criacao.ToString("dd/MM/yyyy");
+                worksheet.Cell(row, 3).Value = item.Atualizacao?.ToString("dd/MM/yyyy") ?? "-";
+                worksheet.Cell(row, 4).Value = item.QuantidadeTopicos;
+
+                row++;
+            }
+
+            // Auto ajustar colunas
+            worksheet.Columns().AdjustToContents();
+
+            // Exporta para byte[]
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
         }
     }
 }

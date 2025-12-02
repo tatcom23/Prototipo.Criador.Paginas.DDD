@@ -23,13 +23,14 @@ namespace Paginas.Application.Services
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
+            var tipo = (TipoBotao)dto.Tipo;
             var maxOrdem = await _repository.ObterMaxOrdemPorPaginaAsync(cdPaginaIntrodutoria);
             var novaOrdem = maxOrdem + 1;
 
             var botao = new Botao(
                 nome: dto.Nome,
                 link: dto.Link,
-                tipo: (TipoBotao)dto.Tipo,
+                tipo,
                 cdPaginaIntrodutoria: cdPaginaIntrodutoria,
                 ordem: novaOrdem
             );

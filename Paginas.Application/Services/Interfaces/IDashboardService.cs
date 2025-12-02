@@ -5,5 +5,6 @@ namespace Paginas.Application.Services
     public interface IDashboardService
     {
         byte[] GerarPdf(DashboardViewModel model, byte[] graficoBytes);
+        byte[] GerarExcel(DashboardViewModel model);
     }
 }
